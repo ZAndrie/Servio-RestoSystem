@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Servio - 8 Core Modules Architecture & UI Prototype</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border, #cbd5e1); border-radius: 4px; }
+    .thermal-receipt {
+      font-family: 'Courier New', Courier, monospace;
+      background: #fffdf5;
+      color: #1a1a1a;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+      border: 1px dashed #cbd5e1;
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen p-4 sm:p-6">
+  <div class="max-w-7xl mx-auto space-y-6">
+
+    <!-- Top Branding & Module Navigation -->
+    <header class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 sm:p-5 shadow-sm">
+      <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-11 h-11 rounded-xl bg-blue-600 flex items-center justify-center text-white font-extrabold text-2xl shadow-lg shadow-blue-500/20">
+            S
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-base sm:text-lg font-bold tracking-tight text-[var(--foreground)]">Servio • 8 Core Functional Modules</h1>
+              <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Specification Aligned</span>
+            </div>
+            <p class="text-xs text-[var(--muted-foreground)]">Front-of-house POS, Kitchen Ticketing, Cashiering & Administration</p>
+          </div>
+        </div>
+
+        <!-- 8-Module Navigation Tabs -->
+        <div class="flex flex-wrap items-center bg-[var(--background)] p-1.5 rounded-xl border border-[var(--border)] gap-1">
+          <button onclick="switchTab('pos')" id="tab-pos" class="tab-btn px-3 py-1.5 text-xs font-medium rounded-lg transition-all bg-blue-600 text-white shadow-sm">
+            🍽️ POS & Floor (Mod 3, 5)
+          </button>
+          <button onclick="switchTab('kitchen')" id="tab-kitchen" class="tab-btn px-3 py-1.5 text-xs font-medium rounded-lg transition-all text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+            🍳 Kitchen KDS (Mod 6)
+          </button>
+          <button onclick="switchTab('payment')" id="tab-payment" class="tab-btn px-3 py-1.5 text-xs font-medium rounded-lg transition-all text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+            💳 Payment & Receipt (Mod 7)
+          </button>
+          <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn px-3 py-1.5 text-xs font-medium rounded-lg transition-all text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+            📊 Analytics & Shift (Mod 8)
+          </button>
+          <button onclick="switchTab('admin-staff')" id="tab-admin-staff" class="tab-btn px-3 py-1.5 text-xs font-medium rounded-lg transition-all text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+            👥 Staff & Menu (Mod 2, 4)
+          </button>
+          <button onclick="switchTab('security-matrix')" id="tab-security-matrix" class="tab-btn px-3 py-1.5 text-xs font-medium rounded-lg transition-all text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+            🛡️ RBAC Matrix (Mod 1)
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ============================================================== -->
+    <!-- MODULE 3 & 5: TABLE FLOOR & POS ORDER TAKING (WAITER)          -->
+    <!-- ============================================================== -->
+    <main id="view-pos" class="view-panel block space-y-6">
+      <!-- Feature Pills -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 flex items-center gap-3 shadow-sm">
+          <span class="text-lg">🪑</span>
+          <div>
+            <h4 class="text-xs font-bold text-[var(--foreground)]">Module 3: Floor Grid</h4>
+            <p class="text-xs text-[var(--muted-foreground)]">Atomic occupancy lock on order</p>
+          </div>
+        </div>
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 flex items-center gap-3 shadow-sm">
+          <span class="text-lg">⚡</span>
+          <div>
+            <h4 class="text-xs font-bold text-[var(--foreground)]">Module 5: Add-On Items</h4>
+            <p class="text-xs text-[var(--muted-foreground)]">Append dishes while pending/prep</p>
+          </div>
+        </div>
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 flex items-center gap-3 shadow-sm">
+          <span class="text-lg">🏷️</span>
+          <div>
+            <h4 class="text-xs font-bold text-[var(--foreground)]">Price Snapshotting</h4>
+            <p class="text-xs text-[var(--muted-foreground)]">Fixed unit_price at placement</p>
+          </div>
+        </div>
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 flex items-center gap-3 shadow-sm">
+          <span class="text-lg">❌</span>
+          <div>
+            <h4 class="text-xs font-bold text-[var(--foreground)]">Order Cancellation</h4>
+            <p class="text-xs text-[var(--muted-foreground)]">Mandatory reason audit trail</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floor Table Selector with Active Order Indicators -->
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-blue-500 uppercase tracking-wider">Floor & Dining Tables</span>
+            <span class="text-xs text-[var(--muted-foreground)]">• Select an Available table for new order, or an Occupied table to Add-On</span>
+          </div>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500">5 Available • 3 Occupied</span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2.5">
+          <!-- Table 1 (Selected) -->
+          <button onclick="selectTable('T-01', 'available', null)" class="table-card p-3 rounded-xl border-2 border-blue-500 bg-blue-500/10 text-center transition-all cursor-pointer">
+            <div class="text-xs font-extrabold text-blue-500">T-01</div>
+            <div class="text-xs text-emerald-600 font-bold mt-0.5">● Free</div>
+            <div class="text-[12px] text-[var(--muted-foreground)]">4 seats</div>
+          </button>
+          <!-- Table 2 -->
+          <button onclick="selectTable('T-02', 'available', null)" class="table-card p-3 rounded-xl border border-[var(--border)] hover:border-blue-400 bg-[var(--background)] text-center transition-all cursor-pointer">
+            <div class="text-xs font-extrabold text-[var(--foreground)]">T-02</div>
+            <div class="text-xs text-emerald-600 font-bold mt-0.5">● Free</div>
+            <div class="text-[12px] text-[var(--muted-foreground)]">2 seats</div>
+          </button>
+          <!-- Table 3 (Occupied - Add-on capable) -->
+          <button onclick="selectTable('T-03', 'occupied', '#ORD-1082')" class="table-card p-3 rounded-xl border border-amber-500/40 bg-amber-500/10 text-center transition-all cursor-pointer hover:border-amber-500">
+            <div class="text-xs font-extrabold text-amber-500">T-03</div>
+            <div class="text-xs text-amber-600 font-bold mt-0.5">Occupied</div>
+            <div class="text-[12px] text-amber-600 font-medium">#1082 (Add-on)</div>
+          </button>
+          <!-- Table 4 -->
+          <button onclick="selectTable('T-04', 'available', null)" class="table-card p-3 rounded-xl border border-[var(--border)] hover:border-blue-400 bg-[var(--background)] text-center transition-all cursor-pointer">
+            <div class="text-xs font-extrabold text-[var(--foreground)]">T-04</div>
+            <div class="text-xs text-emerald-600 font-bold mt-0.5">● Free</div>
+            <div class="text-[12px] text-[var(--muted-foreground)]">4 seats</div>
+          </button>
+          <!-- Table 5 (Occupied) -->
+          <button onclick="selectTable('T-05', 'occupied', '#ORD-1080')" class="table-card p-3 rounded-xl border border-amber-500/40 bg-amber-500/10 text-center transition-all cursor-pointer hover:border-amber-500">
+            <div class="text-xs font-extrabold text-amber-500">T-05</div>
+            <div class="text-xs text-amber-600 font-bold mt-0.5">Occupied</div>
+            <div class="text-[12px] text-amber-600 font-medium">#1080 (Add-on)</div>
+          </button>
+          <!-- Table 6 -->
+          <button onclick="selectTable('T-06', 'available', null)" class="table-card p-3 rounded-xl border border-[var(--border)] hover:border-blue-400 bg-[var(--background)] text-center transition-all cursor-pointer">
+            <div class="text-xs font-extrabold text-[var(--foreground)]">T-06</div>
+            <div class="text-xs text-emerald-600 font-bold mt-0.5">● Free</div>
+            <div class="text-[12px] text-[var(--muted-foreground)]">6 seats</div>
+          </button>
+          <!-- Table 7 -->
+          <button onclick="selectTable('T-07', 'available', null)" class="table-card p-3 rounded-xl border border-[var(--border)] hover:border-blue-400 bg-[var(--background)] text-center transition-all cursor-pointer">
+            <div class="text-xs font-extrabold text-[var(--foreground)]">T-07</div>
+            <div class="text-xs text-emerald-600 font-bold mt-0.5">● Free</div>
+            <div class="text-[12px] text-[var(--muted-foreground)]">2 seats</div>
+          </button>
+          <!-- Table 8 (Occupied) -->
+          <button onclick="selectTable('T-08', 'occupied', '#ORD-1079')" class="table-card p-3 rounded-xl border border-amber-500/40 bg-amber-500/10 text-center transition-all cursor-pointer hover:border-amber-500">
+            <div class="text-xs font-extrabold text-amber-500">VIP-1</div>
+            <div class="text-xs text-amber-600 font-bold mt-0.5">Occupied</div>
+            <div class="text-[12px] text-amber-600 font-medium">#1079 (Add-on)</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Menu Grid & Order Cart -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Menu Side -->
+        <div class="lg:col-span-8 space-y-4">
+          <!-- Category Tabs -->
+          <div class="flex items-center gap-2 overflow-x-auto pb-1">
+            <button class="px-4 py-2 text-xs font-semibold rounded-xl bg-blue-600 text-white shadow-sm whitespace-nowrap">All Items (16)</button>
+            <button class="px-4 py-2 text-xs font-semibold rounded-xl bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] whitespace-nowrap">Sizzling & Mains (6)</button>
+            <button class="px-4 py-2 text-xs font-semibold rounded-xl bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] whitespace-nowrap">Seafood (3)</button>
+            <button class="px-4 py-2 text-xs font-semibold rounded-xl bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] whitespace-nowrap">Appetizers (3)</button>
+            <button class="px-4 py-2 text-xs font-semibold rounded-xl bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] whitespace-nowrap">Beverages (4)</button>
+          </div>
+
+          <!-- Dishes Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+            <div onclick="addDish('Sizzling Pork Sisig', 240.00)" class="bg-[var(--card)] border border-[var(--border)] hover:border-blue-500 rounded-2xl p-3.5 shadow-sm transition-all hover:shadow-md cursor-pointer flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-500">Mains</span>
+                  <span class="text-xs text-emerald-500 font-bold">In Stock</span>
+                </div>
+                <h4 class="text-sm font-bold text-[var(--foreground)]">Sizzling Pork Sisig</h4>
+                <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Crispy pork, egg & calamansi</p>
+              </div>
+              <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-[var(--border)]">
+                <span class="text-sm font-black">₱240.00</span>
+                <span class="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-500 font-bold flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors">+</span>
+              </div>
+            </div>
+
+            <div onclick="addDish('Garlic Butter Shrimp', 320.00)" class="bg-[var(--card)] border border-[var(--border)] hover:border-blue-500 rounded-2xl p-3.5 shadow-sm transition-all hover:shadow-md cursor-pointer flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-500">Seafood</span>
+                  <span class="text-xs text-emerald-500 font-bold">In Stock</span>
+                </div>
+                <h4 class="text-sm font-bold text-[var(--foreground)]">Garlic Butter Shrimp</h4>
+                <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Tiger prawns in garlic butter</p>
+              </div>
+              <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-[var(--border)]">
+                <span class="text-sm font-black">₱320.00</span>
+                <span class="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-500 font-bold flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors">+</span>
+              </div>
+            </div>
+
+            <div onclick="addDish('Beef Bulalo Soup', 390.00)" class="bg-[var(--card)] border border-[var(--border)] hover:border-blue-500 rounded-2xl p-3.5 shadow-sm transition-all hover:shadow-md cursor-pointer flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-500">Chef Pick</span>
+                  <span class="text-xs text-emerald-500 font-bold">In Stock</span>
+                </div>
+                <h4 class="text-sm font-bold text-[var(--foreground)]">Beef Bulalo Soup</h4>
+                <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Slow-cooked beef shank & marrow</p>
+              </div>
+              <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-[var(--border)]">
+                <span class="text-sm font-black">₱390.00</span>
+                <span class="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-500 font-bold flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors">+</span>
+              </div>
+            </div>
+
+            <!-- Sold out item with guard -->
+            <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3.5 opacity-50 relative cursor-not-allowed flex flex-col justify-between">
+              <div class="absolute inset-0 bg-[var(--card)]/80 backdrop-blur-[1px] rounded-2xl flex items-center justify-center z-10">
+                <span class="px-3 py-1 bg-red-600 text-white font-extrabold text-xs rounded-full uppercase tracking-wider">Sold Out</span>
+              </div>
+              <div>
+                <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-500/10 text-slate-400">Poultry</span>
+                <h4 class="text-sm font-bold text-[var(--foreground)] mt-1">Chicken Inasal</h4>
+              </div>
+              <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-[var(--border)]">
+                <span class="text-sm font-black">₱220.00</span>
+              </div>
+            </div>
+
+            <div onclick="addDish('Crispy Calamares', 195.00)" class="bg-[var(--card)] border border-[var(--border)] hover:border-blue-500 rounded-2xl p-3.5 shadow-sm transition-all hover:shadow-md cursor-pointer flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-500">Appetizers</span>
+                  <span class="text-xs text-emerald-500 font-bold">In Stock</span>
+                </div>
+                <h4 class="text-sm font-bold text-[var(--foreground)]">Crispy Calamares</h4>
+                <p class="text-xs text-[var(--muted-foreground)] mt-0.5">With garlic tartar sauce</p>
+              </div>
+              <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-[var(--border)]">
+                <span class="text-sm font-black">₱195.00</span>
+                <span class="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-500 font-bold flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors">+</span>
+              </div>
+            </div>
+
+            <div onclick="addDish('Iced Calamansi Juice', 65.00)" class="bg-[var(--card)] border border-[var(--border)] hover:border-blue-500 rounded-2xl p-3.5 shadow-sm transition-all hover:shadow-md cursor-pointer flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-500">Drinks</span>
+                  <span class="text-xs text-emerald-500 font-bold">In Stock</span>
+                </div>
+                <h4 class="text-sm font-bold text-[var(--foreground)]">Iced Calamansi Juice</h4>
+                <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Freshly squeezed with honey</p>
+              </div>
+              <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-[var(--border)]">
+                <span class="text-sm font-black">₱65.00</span>
+                <span class="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-500 font-bold flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors">+</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order Cart Side -->
+        <div class="lg:col-span-4">
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm sticky top-6 space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="text-sm font-bold text-[var(--foreground)]">Order Docket</h3>
+                  <span id="target-table-badge" class="px-2 py-0.5 rounded-md bg-blue-500 text-white font-bold text-xs">Table T-01 (New)</span>
+                </div>
+                <p class="text-xs text-[var(--muted-foreground)]">Staff: Maria S. • Rate Limiter: Active</p>
+              </div>
+              <button onclick="openCancelModal()" class="text-xs text-red-500 font-semibold hover:underline">Cancel Order</button>
+            </div>
+
+            <div class="space-y-3 max-h-[280px] overflow-y-auto pr-1">
+              <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-2">
+                <div class="flex justify-between">
+                  <span class="text-xs font-bold text-[var(--foreground)]">Sizzling Pork Sisig</span>
+                  <span class="text-xs font-extrabold text-[var(--foreground)]">₱480.00</span>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-[var(--muted-foreground)]">₱240.00 × 2</span>
+                  <input type="text" value="No chili for kid" class="bg-[var(--card)] border border-[var(--border)] rounded px-2 py-0.5 text-xs w-36" placeholder="Prep note...">
+                </div>
+              </div>
+
+              <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-2">
+                <div class="flex justify-between">
+                  <span class="text-xs font-bold text-[var(--foreground)]">Beef Bulalo Soup</span>
+                  <span class="text-xs font-extrabold text-[var(--foreground)]">₱390.00</span>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-[var(--muted-foreground)]">₱390.00 × 1</span>
+                  <input type="text" value="Extra broth" class="bg-[var(--card)] border border-[var(--border)] rounded px-2 py-0.5 text-xs w-36" placeholder="Prep note...">
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-3 border-t border-[var(--border)] space-y-1.5 text-xs">
+              <div class="flex justify-between text-[var(--muted-foreground)]">
+                <span>Server-computed Total:</span>
+                <span class="font-extrabold text-[var(--foreground)] text-sm">₱870.00</span>
+              </div>
+              <p class="text-[12px] text-slate-500">Includes 12% VAT. Unit prices locked in order_items snapshot.</p>
+            </div>
+
+            <!-- Action buttons: Submit or Add-on -->
+            <div class="space-y-2 pt-1">
+              <button onclick="alert('Order successfully submitted! Table locked as OCCUPIED and dispatched to Kitchen KDS.')" class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs tracking-wide shadow flex items-center justify-center gap-2">
+                <span>🚀</span> Submit & Send to Kitchen
+              </button>
+              <button onclick="alert('Add-on items appended to active order #1082!')" class="w-full py-2.5 rounded-xl bg-[var(--background)] border border-blue-500/40 text-blue-500 font-bold text-xs hover:bg-blue-500/10 flex items-center justify-center gap-1.5">
+                <span>➕</span> Append as Add-On (Existing Order)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ============================================================== -->
+    <!-- MODULE 6: KITCHEN DISPLAY SYSTEM (KDS)                         -->
+    <!-- ============================================================== -->
+    <section id="view-kitchen" class="view-panel hidden space-y-6">
+      <div class="bg-slate-900 text-white border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
+        <div class="flex items-center gap-3">
+          <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
+          <div>
+            <h2 class="text-sm font-bold tracking-wide">Module 6: Kitchen Display Board (Auto-Polling 3s)</h2>
+            <p class="text-xs text-slate-400">Separates incoming Pending tickets from in-progress Preparing tickets</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="px-2.5 py-1 rounded-lg bg-red-500/20 text-red-400 text-xs font-bold border border-red-500/30">1 Overdue (>10m)</span>
+          <span class="px-2.5 py-1 rounded-lg bg-blue-500/20 text-blue-400 text-xs font-bold border border-blue-500/30">2 In Queue</span>
+        </div>
+      </div>
+
+      <!-- KDS Lanes: Pending vs Preparing -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Lane 1: Pending Orders (Needs Start) -->
+        <div class="space-y-4">
+          <div class="flex items-center justify-between border-b border-[var(--border)] pb-2">
+            <h3 class="text-xs font-extrabold text-blue-500 uppercase tracking-wider flex items-center gap-2">
+              <span>📥</span> Pending Ingestion (Waiting on Stove)
+            </h3>
+            <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500">1 Ticket</span>
+          </div>
+
+          <!-- Pending Ticket -->
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-[var(--border)]">
+              <div>
+                <span class="text-xs font-bold text-blue-500">#ORD-1085</span>
+                <span class="ml-2 font-black text-sm text-[var(--foreground)]">TABLE T-01</span>
+              </div>
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-500">⏱️ 2m ago</span>
+            </div>
+            <div class="space-y-2 text-xs">
+              <div class="flex justify-between font-bold">
+                <span>2× Sizzling Pork Sisig</span>
+                <span class="text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded">No Chili</span>
+              </div>
+              <div class="flex justify-between font-bold">
+                <span>1× Beef Bulalo Soup</span>
+                <span class="text-blue-500 bg-blue-500/10 px-1.5 py-0.5 rounded">Extra Broth</span>
+              </div>
+            </div>
+            <button onclick="alert('Ticket #1085 moved to PREPARING lane!')" class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs tracking-wider shadow">
+              🍳 Start Preparing
+            </button>
+          </div>
+        </div>
+
+        <!-- Lane 2: Preparing Orders (Live Cooking) -->
+        <div class="space-y-4">
+          <div class="flex items-center justify-between border-b border-[var(--border)] pb-2">
+            <h3 class="text-xs font-extrabold text-amber-500 uppercase tracking-wider flex items-center gap-2">
+              <span>🔥</span> In Preparation (On the Line)
+            </h3>
+            <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500">2 Tickets</span>
+          </div>
+
+          <!-- Overdue Ticket -->
+          <div class="bg-[var(--card)] border-2 border-red-500/80 rounded-2xl p-4 shadow-md space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-red-500/20 bg-red-500/5 -mx-4 -mt-4 p-3 rounded-t-2xl">
+              <div>
+                <span class="text-xs font-bold text-red-500">#ORD-1082</span>
+                <span class="ml-2 font-black text-sm text-[var(--foreground)]">TABLE T-03</span>
+              </div>
+              <span class="text-xs font-black px-2 py-0.5 rounded bg-red-500 text-white animate-pulse">⚠️ 14m (Overdue)</span>
+            </div>
+            <div class="space-y-2 text-xs">
+              <div class="flex justify-between font-bold">
+                <span>2× Garlic Butter Shrimp</span>
+                <span class="text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded">HIGH PRIORITY</span>
+              </div>
+              <div class="flex justify-between font-bold">
+                <span>1× Crispy Calamares</span>
+                <span class="text-slate-400">Regular</span>
+              </div>
+            </div>
+            <button onclick="alert('Ticket #1082 marked READY! Waiter notified for floor delivery.')" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs tracking-wider shadow">
+              ✅ Mark Ready for Pickup
+            </button>
+          </div>
+
+          <!-- Normal Cooking Ticket -->
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-[var(--border)]">
+              <div>
+                <span class="text-xs font-bold text-amber-500">#ORD-1084</span>
+                <span class="ml-2 font-black text-sm text-[var(--foreground)]">TABLE T-05</span>
+              </div>
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-600">⏱️ 6m ago</span>
+            </div>
+            <div class="space-y-2 text-xs">
+              <div class="flex justify-between font-bold">
+                <span>1× Beef Bulalo Soup</span>
+                <span class="text-slate-400">Piping hot</span>
+              </div>
+            </div>
+            <button onclick="alert('Ticket #1084 marked READY!')" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs tracking-wider shadow">
+              ✅ Mark Ready for Pickup
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- MODULE 7: BILLING, PAYMENT & 80MM RECEIPT                      -->
+    <!-- ============================================================== -->
+    <section id="view-payment" class="view-panel hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-7 space-y-5">
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-5">
+            <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+              <div>
+                <span class="text-xs font-bold text-blue-500 uppercase tracking-wider">Module 7: Billing & Cashiering</span>
+                <h3 class="text-base font-bold text-[var(--foreground)] mt-0.5">Checkout Table T-03 • Order #ORD-1082</h3>
+              </div>
+              <span class="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 font-bold text-xs">Dishes Served</span>
+            </div>
+
+            <!-- Payment Method Selection -->
+            <div>
+              <label class="block text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-2">Select Tender Type</label>
+              <div class="grid grid-cols-3 gap-3">
+                <button onclick="selectPayType('cash')" id="pay-cash-btn" class="p-3 rounded-xl border-2 border-blue-500 bg-blue-500/10 font-bold text-xs text-blue-500 flex flex-col items-center gap-1">
+                  <span class="text-base">💵</span> Cash
+                </button>
+                <button onclick="selectPayType('gcash')" id="pay-gcash-btn" class="p-3 rounded-xl border border-[var(--border)] hover:border-blue-400 bg-[var(--background)] font-bold text-xs text-[var(--foreground)] flex flex-col items-center gap-1">
+                  <span class="text-base">📱</span> GCash (Exact)
+                </button>
+                <button onclick="selectPayType('card')" id="pay-card-btn" class="p-3 rounded-xl border border-[var(--border)] hover:border-blue-400 bg-[var(--background)] font-bold text-xs text-[var(--foreground)] flex flex-col items-center gap-1">
+                  <span class="text-base">💳</span> Card Terminal
+                </button>
+              </div>
+            </div>
+
+            <!-- Amount Calculation -->
+            <div class="space-y-3">
+              <div class="flex justify-between items-center text-xs">
+                <span class="font-bold text-[var(--muted-foreground)]">GROSS AMOUNT DUE:</span>
+                <span class="font-black text-blue-500 text-lg">₱835.00</span>
+              </div>
+              <div class="relative">
+                <span class="absolute left-3.5 top-2.5 text-base font-bold text-[var(--muted-foreground)]">₱</span>
+                <input id="cash-tender-input" type="number" value="1000" oninput="updateChange()" class="w-full pl-8 pr-4 py-2.5 text-lg font-bold rounded-xl bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)]">
+              </div>
+
+              <!-- Quick cash buttons -->
+              <div class="flex gap-2">
+                <button onclick="setQuickCash(835)" class="px-3 py-1 rounded-lg bg-[var(--background)] border border-[var(--border)] text-xs font-bold">Exact (₱835)</button>
+                <button onclick="setQuickCash(1000)" class="px-3 py-1 rounded-lg bg-[var(--background)] border border-[var(--border)] text-xs font-bold">₱1,000</button>
+                <button onclick="setQuickCash(1500)" class="px-3 py-1 rounded-lg bg-[var(--background)] border border-[var(--border)] text-xs font-bold">₱1,500</button>
+              </div>
+            </div>
+
+            <!-- Change box -->
+            <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+              <div>
+                <span class="text-xs font-bold text-emerald-600 uppercase">Change Due to Customer</span>
+                <p class="text-[12px] text-emerald-700">Tender: ₱1,000.00 - Total: ₱835.00</p>
+              </div>
+              <span id="cash-change-display" class="text-2xl font-black text-emerald-600">₱165.00</span>
+            </div>
+
+            <button onclick="alert('Transaction complete! Table T-03 atomically RELEASED to Available. Printing 80mm receipt.')" class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs tracking-wider uppercase shadow-lg shadow-emerald-500/20">
+              💳 Settle Payment & Release Table
+            </button>
+          </div>
+        </div>
+
+        <!-- 80mm Thermal Receipt Preview -->
+        <div class="lg:col-span-5">
+          <div class="thermal-receipt p-6 rounded-2xl max-w-sm mx-auto space-y-4">
+            <div class="text-center space-y-1 border-b border-dashed border-slate-300 pb-3">
+              <h3 class="font-extrabold text-base tracking-widest uppercase">SERVIO RESTAURANT</h3>
+              <p class="text-[12px] text-slate-600">Metro Manila, Philippines • VAT Reg</p>
+              <p class="text-[12px] text-slate-600">TIN: 009-876-543-000</p>
+            </div>
+            <div class="text-[12px] space-y-0.5 border-b border-dashed border-slate-300 pb-3">
+              <div class="flex justify-between"><span>Receipt #:</span><span class="font-bold">RCPT-2026-1082</span></div>
+              <div class="flex justify-between"><span>Time (Asia/Manila):</span><span>2026-11-22 14:15:32</span></div>
+              <div class="flex justify-between"><span>Table / Waiter:</span><span>T-03 / Maria S.</span></div>
+            </div>
+            <div class="text-[12px] space-y-2 border-b border-dashed border-slate-300 pb-3">
+              <div class="flex justify-between">
+                <div>
+                  <div class="font-bold">Garlic Butter Shrimp</div>
+                  <div class="text-[12px] text-slate-500">2 @ ₱320.00 (snapshot)</div>
+                </div>
+                <span class="font-bold">₱640.00</span>
+              </div>
+              <div class="flex justify-between">
+                <div>
+                  <div class="font-bold">Crispy Calamares</div>
+                  <div class="text-[12px] text-slate-500">1 @ ₱195.00 (snapshot)</div>
+                </div>
+                <span class="font-bold">₱195.00</span>
+              </div>
+            </div>
+            <div class="text-[12px] space-y-1 border-b border-dashed border-slate-300 pb-3">
+              <div class="flex justify-between font-extrabold text-sm"><span>TOTAL:</span><span>₱835.00</span></div>
+              <div class="flex justify-between text-slate-600"><span>Payment Method:</span><span class="uppercase">CASH</span></div>
+              <div class="flex justify-between text-slate-600"><span>Amount Tendered:</span><span>₱1,000.00</span></div>
+              <div class="flex justify-between font-bold text-emerald-700"><span>CHANGE:</span><span>₱165.00</span></div>
+            </div>
+            <button onclick="window.print()" class="w-full py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5 shadow">
+              <span>🖨️</span> Print 80mm Receipt (window.print)
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- MODULE 8: DASHBOARD & SALES REPORTING                          -->
+    <!-- ============================================================== -->
+    <section id="view-dashboard" class="view-panel hidden space-y-6">
+      <!-- Role Toggle for Dashboard -->
+      <div class="flex items-center justify-between bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
+        <div>
+          <span class="text-xs font-bold text-blue-500 uppercase tracking-wider">Module 8: Operational & Sales Intelligence</span>
+          <h3 class="text-sm font-bold text-[var(--foreground)] mt-0.5">Asia/Manila Business Day Reporting (06:00 - 05:59)</h3>
+        </div>
+        <div class="flex items-center bg-[var(--background)] p-1 rounded-xl border border-[var(--border)]">
+          <button onclick="toggleDashboardRole('admin')" id="dash-role-admin" class="px-3 py-1 text-xs font-bold rounded-lg bg-blue-600 text-white">Admin (Full Analytics)</button>
+          <button onclick="toggleDashboardRole('waiter')" id="dash-role-waiter" class="px-3 py-1 text-xs font-bold rounded-lg text-[var(--muted-foreground)]">Waiter (Shift Summary)</button>
+        </div>
+      </div>
+
+      <!-- Admin View: 4 KPI Cards + Sales by Payment Method + Top Selling -->
+      <div id="dash-admin-container" class="space-y-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
+            <span class="text-xs font-semibold text-[var(--muted-foreground)] uppercase">Today's Gross Sales</span>
+            <div class="text-2xl font-black text-[var(--foreground)] mt-1">₱42,390.00</div>
+            <p class="text-[12px] text-emerald-500 font-bold mt-1">● 48 settled tickets</p>
+          </div>
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
+            <span class="text-xs font-semibold text-[var(--muted-foreground)] uppercase">Open Tables</span>
+            <div class="text-2xl font-black text-blue-500 mt-1">3 / 8 Occupied</div>
+            <p class="text-[12px] text-[var(--muted-foreground)] mt-1">37.5% Floor utilization</p>
+          </div>
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
+            <span class="text-xs font-semibold text-[var(--muted-foreground)] uppercase">Avg Ticket Value</span>
+            <div class="text-2xl font-black text-[var(--foreground)] mt-1">₱883.12</div>
+            <p class="text-[12px] text-emerald-500 font-bold mt-1">+8.4% vs yesterday</p>
+          </div>
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
+            <span class="text-xs font-semibold text-[var(--muted-foreground)] uppercase">Void / Cancelled</span>
+            <div class="text-2xl font-black text-red-500 mt-1">1 Order</div>
+            <p class="text-[12px] text-red-500 mt-1">Mandatory reason logged</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <!-- Payment breakdown -->
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+            <h4 class="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider">Revenue by Payment Channel</h4>
+            <div class="space-y-2 text-xs">
+              <div class="flex justify-between items-center p-2 rounded-lg bg-[var(--background)]">
+                <span class="font-bold flex items-center gap-2">💵 Cash Tender</span>
+                <span class="font-black">₱24,190.00 (57%)</span>
+              </div>
+              <div class="flex justify-between items-center p-2 rounded-lg bg-[var(--background)]">
+                <span class="font-bold flex items-center gap-2">📱 GCash QR</span>
+                <span class="font-black">₱13,400.00 (32%)</span>
+              </div>
+              <div class="flex justify-between items-center p-2 rounded-lg bg-[var(--background)]">
+                <span class="font-bold flex items-center gap-2">💳 Card Terminal</span>
+                <span class="font-black">₱4,800.00 (11%)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Top dishes -->
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+            <h4 class="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider">Top Selling Dishes (Units)</h4>
+            <div class="space-y-2 text-xs">
+              <div class="flex justify-between items-center p-2 rounded-lg bg-[var(--background)]">
+                <span class="font-bold">1. Sizzling Pork Sisig</span>
+                <span class="font-black text-blue-500">34 portions</span>
+              </div>
+              <div class="flex justify-between items-center p-2 rounded-lg bg-[var(--background)]">
+                <span class="font-bold">2. Beef Bulalo Soup</span>
+                <span class="font-black text-blue-500">21 portions</span>
+              </div>
+              <div class="flex justify-between items-center p-2 rounded-lg bg-[var(--background)]">
+                <span class="font-bold">3. Garlic Butter Shrimp</span>
+                <span class="font-black text-blue-500">18 portions</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Waiter Shift Summary View (Hidden by default) -->
+      <div id="dash-waiter-container" class="hidden space-y-4">
+        <div class="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-5 space-y-4">
+          <div class="flex justify-between items-center">
+            <div>
+              <span class="text-xs font-bold text-blue-500 uppercase">My Shift Summary</span>
+              <h3 class="text-base font-bold text-[var(--foreground)] mt-0.5">Staff: Maria Santos (Waiter #12)</h3>
+            </div>
+            <span class="px-3 py-1 rounded-full bg-blue-600 text-white font-bold text-xs">Active Shift (6.5 hrs)</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3 text-center">
+            <div class="p-3 bg-[var(--card)] rounded-xl border border-[var(--border)]">
+              <div class="text-lg font-black text-blue-500">14</div>
+              <div class="text-[12px] text-[var(--muted-foreground)]">Tables Served</div>
+            </div>
+            <div class="p-3 bg-[var(--card)] rounded-xl border border-[var(--border)]">
+              <div class="text-lg font-black text-emerald-500">₱12,840.00</div>
+              <div class="text-[12px] text-[var(--muted-foreground)]">Total Orders Taken</div>
+            </div>
+            <div class="p-3 bg-[var(--card)] rounded-xl border border-[var(--border)]">
+              <div class="text-lg font-black text-amber-500">0</div>
+              <div class="text-[12px] text-[var(--muted-foreground)]">Uncollected Tables</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- MODULE 2 & 4: STAFF & MENU ADMINISTRATION                      -->
+    <!-- ============================================================== -->
+    <section id="view-admin-staff" class="view-panel hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Module 2: Staff Management -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-4">
+          <div class="flex justify-between items-center border-b border-[var(--border)] pb-3">
+            <div>
+              <span class="text-xs font-bold text-blue-500 uppercase">Module 2: Staff Management</span>
+              <h4 class="text-sm font-bold text-[var(--foreground)]">Personnel Accounts & Activation</h4>
+            </div>
+            <button onclick="alert('Open New Employee Registration Modal (Role assignment: Admin, Waiter, Kitchen)')" class="px-3 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs">
+              + New Staff
+            </button>
+          </div>
+
+          <div class="space-y-2.5 text-xs">
+            <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] flex justify-between items-center">
+              <div>
+                <span class="font-bold">admin_maria</span>
+                <span class="ml-2 px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 font-bold text-[12px]">ADMIN</span>
+                <p class="text-[12px] text-[var(--muted-foreground)]">Maria Admin • Created Nov 2026</p>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-bold">Active</span>
+            </div>
+
+            <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] flex justify-between items-center">
+              <div>
+                <span class="font-bold">waiter_carlos</span>
+                <span class="ml-2 px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 font-bold text-[12px]">WAITER</span>
+                <p class="text-[12px] text-[var(--muted-foreground)]">Carlos Garcia • 14 orders today</p>
+              </div>
+              <button onclick="confirm('Deactivate Carlos Garcia? Account will lose login access but historical orders remain intact.')" class="px-2 py-1 rounded bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors font-bold text-xs">
+                Deactivate
+              </button>
+            </div>
+
+            <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] flex justify-between items-center opacity-60">
+              <div>
+                <span class="font-bold line-through">kitchen_ramon</span>
+                <span class="ml-2 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 font-bold text-[12px]">KITCHEN</span>
+                <p class="text-[12px] text-[var(--muted-foreground)]">Deactivated (audit trail safe)</p>
+              </div>
+              <button onclick="alert('Account reactivated!')" class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-600 font-bold text-xs">
+                Reactivate
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Module 4: Menu Catalog & Availability Switches -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-4">
+          <div class="flex justify-between items-center border-b border-[var(--border)] pb-3">
+            <div>
+              <span class="text-xs font-bold text-blue-500 uppercase">Module 4: Menu & Catalog</span>
+              <h4 class="text-sm font-bold text-[var(--foreground)]">One-Tap Availability Switches</h4>
+            </div>
+            <button onclick="alert('Open Add Menu Item Form')" class="px-3 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs">
+              + Add Item
+            </button>
+          </div>
+
+          <div class="space-y-2.5 text-xs">
+            <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] flex justify-between items-center">
+              <div>
+                <div class="font-bold">Sizzling Pork Sisig</div>
+                <div class="text-[12px] text-[var(--muted-foreground)]">Base Price: ₱240.00 • Mains</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-bold">In Stock</span>
+                <button onclick="alert('Toggled to Sold Out! Instantly disabled on POS tablets.')" class="px-2.5 py-1 rounded bg-slate-200 dark:bg-slate-700 text-xs font-bold">Toggle</button>
+              </div>
+            </div>
+
+            <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] flex justify-between items-center bg-red-500/5">
+              <div>
+                <div class="font-bold">Chicken Inasal</div>
+                <div class="text-[12px] text-red-500 font-medium">Sold Out (Blocked from cart)</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-red-500/10 text-red-600 font-bold">Sold Out</span>
+                <button onclick="alert('Restocked! Enabled on all POS tablets.')" class="px-2.5 py-1 rounded bg-emerald-600 text-white text-xs font-bold">Restock</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- MODULE 1: RBAC MATRIX & SECURITY SPECIFICATION                -->
+    <!-- ============================================================== -->
+    <section id="view-security-matrix" class="view-panel hidden space-y-6">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-5">
+        <div class="border-b border-[var(--border)] pb-3">
+          <span class="text-xs font-bold text-blue-500 uppercase">Module 1: RBAC Enforcement</span>
+          <h3 class="text-base font-bold text-[var(--foreground)] mt-0.5">Authoritative Module-to-Role Matrix</h3>
+          <p class="text-xs text-[var(--muted-foreground)]">Enforced dual-layer via Vue Router beforeEach guards + Laravel Sanctum RoleMiddleware</p>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left border-collapse">
+            <thead>
+              <tr class="border-b border-[var(--border)] text-[var(--muted-foreground)]">
+                <th class="py-2.5 px-3">Module # & Name</th>
+                <th class="py-2.5 px-3">Admin</th>
+                <th class="py-2.5 px-3">Waiter / Cashier</th>
+                <th class="py-2.5 px-3">Kitchen</th>
+                <th class="py-2.5 px-3">Landing Redirection</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[var(--border)]">
+              <tr>
+                <td class="py-3 px-3 font-bold">1. Authentication & RBAC</td>
+                <td class="py-3 px-3 font-semibold text-purple-600">Full</td>
+                <td class="py-3 px-3 font-semibold text-blue-600">Full</td>
+                <td class="py-3 px-3 font-semibold text-amber-600">Full</td>
+                <td class="py-3 px-3 text-[var(--muted-foreground)]">Role-based auto redirect</td>
+              </tr>
+              <tr>
+                <td class="py-3 px-3 font-bold">2. Staff & User Management</td>
+                <td class="py-3 px-3 font-semibold text-purple-600">Full (CRUD / Deactivate)</td>
+                <td class="py-3 px-3 text-slate-400">—</td>
+                <td class="py-3 px-3 text-slate-400">—</td>
+                <td class="py-3 px-3 text-[var(--muted-foreground)]">/admin/staff</td>
+              </tr>
+              <tr>
+                <td class="py-3 px-3 font-bold">3. Table & Floor Management</td>
+                <td class="py-3 px-3 font-semibold text-purple-600">View / Configure</td>
+                <td class="py-3 px-3 font-semibold text-blue-600">Select & Occupy</td>
+                <td class="py-3 px-3 text-slate-400">—</td>
+                <td class="py-3 px-3 text-[var(--muted-foreground)]">Embedded in /pos</td>
+              </tr>
+              <tr>
+                <td class="py-3 px-3 font-bold">4. Menu & Catalog Management</td>
+                <td class="py-3 px-3 font-semibold text-purple-600">Full CRUD</td>
+                <td class="py-3 px-3 font-semibold text-blue-600">View / Order</td>
+                <td class="py-3 px-3 text-slate-400">—</td>
+                <td class="py-3 px-3 text-[var(--muted-foreground)]">/admin/menu</td>
+              </tr>
+              <tr>
+                <td class="py-3 px-3 font-bold">5. POS & Order Management</td>
+                <td class="py-3 px-3 font-semibold text-purple-600">View / Cancel</td>
+                <td class="py-3 px-3 font-semibold text-blue-600">Create, Add-on, Serve</td>
+                <td class="py-3 px-3 text-slate-400">—</td>
+                <td class="py-3 px-3 text-blue-600 font-bold">/pos (Default Waiter Landing)</td>
+              </tr>
+              <tr>
+                <td class="py-3 px-3 font-bold">6. Kitchen Display System</td>
+                <td class="py-3 px-3 text-slate-400">—</td>
+                <td class="py-3 px-3 text-slate-400">—</td>
+                <td class="py-3 px-3 font-semibold text-amber-600">Prepare & Mark Ready</td>
+                <td class="py-3 px-3 text-amber-600 font-bold">/kitchen (Default Kitchen Landing)</td>
+              </tr>
+              <tr>
+                <td class="py-3 px-3 font-bold">7. Billing, Payment & Receipts</td>
+                <td class="py-3 px-3 text-slate-400">—</td>
+                <td class="py-3 px-3 font-semibold text-blue-600">Checkout & Print</td>
+                <td class="py-3 px-3 text-slate-400">—</td>
+                <td class="py-3 px-3 text-[var(--muted-foreground)]">/payment/:orderId</td>
+              </tr>
+              <tr>
+                <td class="py-3 px-3 font-bold">8. Dashboard & Sales Reporting</td>
+                <td class="py-3 px-3 font-semibold text-purple-600">Full Analytics</td>
+                <td class="py-3 px-3 font-semibold text-blue-600">Basic Shift Summary</td>
+                <td class="py-3 px-3 text-slate-400">—</td>
+                <td class="py-3 px-3 text-purple-600 font-bold">/admin/dashboard (Default Admin)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Password Change Policy Card -->
+        <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3 text-xs">
+          <span class="text-lg">🔑</span>
+          <div>
+            <h4 class="font-bold text-amber-600 uppercase">Mandatory First-Login Password Change</h4>
+            <p class="text-[var(--muted-foreground)] mt-0.5">
+              Default seeded accounts carry <code>must_change_password: true</code>. The router intercepts initial logins and displays a forced password reset modal before unlocking operational screens.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cancellation Modal Simulation -->
+    <div id="cancel-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-4">
+        <div class="flex justify-between items-center border-b border-[var(--border)] pb-2">
+          <h3 class="text-sm font-bold text-red-500 flex items-center gap-2">
+            <span>⚠️</span> Cancel Active Order
+          </h3>
+          <button onclick="closeCancelModal()" class="text-xs text-[var(--muted-foreground)]">✕</button>
+        </div>
+        <p class="text-xs text-[var(--muted-foreground)]">
+          Cancelling this order will release the dining table back to <b>Available</b>. A cancellation reason is mandatory for audit logging.
+        </p>
+        <div class="space-y-1">
+          <label class="text-xs font-bold text-[var(--foreground)]">Cancellation Reason *</label>
+          <select class="w-full text-xs p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)]">
+            <option>Customer walk-out</option>
+            <option>Duplicate order entered</option>
+            <option>Accidental table selection</option>
+            <option>Out of stock ingredient</option>
+            <option>Other / Management override</option>
+          </select>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="closeCancelModal()" class="flex-1 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs font-bold">Keep Order</button>
+          <button onclick="alert('Order cancelled and logged with reason. Table released!'); closeCancelModal()" class="flex-1 py-2 rounded-xl bg-red-600 text-white text-xs font-bold hover:bg-red-700">Confirm Void</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function switchTab(viewId) {
+      document.querySelectorAll('.view-panel').forEach(el => {
+        el.classList.add('hidden');
+        el.classList.remove('block');
+      });
+      const panel = document.getElementById('view-' + viewId);
+      if (panel) {
+        panel.classList.remove('hidden');
+        panel.classList.add('block');
+      }
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
+        b.classList.add('text-[var(--muted-foreground)]');
+      });
+      const activeBtn = document.getElementById('tab-' + viewId);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-[var(--muted-foreground)]');
+        activeBtn.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
+      }
+    }
+
+    function selectTable(tableNum, status, orderRef) {
+      document.querySelectorAll('.table-card').forEach(c => {
+        c.classList.remove('ring-2', 'ring-blue-500');
+      });
+      event.currentTarget.classList.add('ring-2', 'ring-blue-500');
+      const badge = document.getElementById('target-table-badge');
+      if (status === 'occupied') {
+        badge.innerText = 'Table ' + tableNum + ' (Add-on ' + orderRef + ')';
+        badge.classList.remove('bg-blue-500');
+        badge.classList.add('bg-amber-500');
+      } else {
+        badge.innerText = 'Table ' + tableNum + ' (New Order)';
+        badge.classList.remove('bg-amber-500');
+        badge.classList.add('bg-blue-500');
+      }
+    }
+
+    function addDish(name, price) {
+      alert('Added 1x ' + name + ' (₱' + price.toFixed(2) + ') to cart.');
+    }
+
+    function openCancelModal() {
+      document.getElementById('cancel-modal').classList.remove('hidden');
+    }
+
+    function closeCancelModal() {
+      document.getElementById('cancel-modal').classList.add('hidden');
+    }
+
+    function selectPayType(type) {
+      ['cash', 'gcash', 'card'].forEach(t => {
+        const btn = document.getElementById('pay-' + t + '-btn');
+        btn.classList.remove('border-2', 'border-blue-500', 'bg-blue-500/10', 'text-blue-500');
+        btn.classList.add('border-[var(--border)]', 'bg-[var(--background)]', 'text-[var(--foreground)]');
+      });
+      const active = document.getElementById('pay-' + type + '-btn');
+      active.classList.add('border-2', 'border-blue-500', 'bg-blue-500/10', 'text-blue-500');
+    }
+
+    function setQuickCash(val) {
+      document.getElementById('cash-tender-input').value = val;
+      updateChange();
+    }
+
+    function updateChange() {
+      const val = parseFloat(document.getElementById('cash-tender-input').value) || 0;
+      const change = Math.max(0, val - 835.00);
+      document.getElementById('cash-change-display').innerText = '₱' + change.toFixed(2);
+    }
+
+    function toggleDashboardRole(role) {
+      const adminBtn = document.getElementById('dash-role-admin');
+      const waiterBtn = document.getElementById('dash-role-waiter');
+      const adminBox = document.getElementById('dash-admin-container');
+      const waiterBox = document.getElementById('dash-waiter-container');
+
+      if (role === 'admin') {
+        adminBtn.classList.add('bg-blue-600', 'text-white');
+        adminBtn.classList.remove('text-[var(--muted-foreground)]');
+        waiterBtn.classList.remove('bg-blue-600', 'text-white');
+        waiterBtn.classList.add('text-[var(--muted-foreground)]');
+        adminBox.classList.remove('hidden');
+        waiterBox.classList.add('hidden');
+      } else {
+        waiterBtn.classList.add('bg-blue-600', 'text-white');
+        waiterBtn.classList.remove('text-[var(--muted-foreground)]');
+        adminBtn.classList.remove('bg-blue-600', 'text-white');
+        adminBtn.classList.add('text-[var(--muted-foreground)]');
+        adminBox.classList.add('hidden');
+        waiterBox.classList.remove('hidden');
+      }
+    }
+  </script>
+</body>
+</html>
