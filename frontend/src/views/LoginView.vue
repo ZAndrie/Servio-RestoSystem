@@ -186,9 +186,9 @@ const showPasswordUpdate = ref(false)
 const newPassword = ref('')
 
 const demoStaff = [
-  { username: 'waiter', firstName: 'Ana', roleLabel: 'Waiter' },
-  { username: 'kitchen', firstName: 'Ramon', roleLabel: 'Kitchen' },
-  { username: 'admin', firstName: 'Maria', roleLabel: 'Admin' },
+  { username: 'waiter', password: 'waiter123', firstName: 'Ana', roleLabel: 'Waiter' },
+  { username: 'kitchen', password: 'kitchen123', firstName: 'Ramon', roleLabel: 'Kitchen' },
+  { username: 'admin', password: 'admin123', firstName: 'Maria', roleLabel: 'Admin' },
 ]
 
 const navigateToLanding = () => {
@@ -216,9 +216,11 @@ const completeSignIn = async (user: string, pass: string) => {
 const handleSubmit = () => completeSignIn(username.value, password.value)
 
 const quickLogin = (roleUser: string) => {
+  const matched = demoStaff.find((d) => d.username === roleUser)
+  const demoPass = matched?.password || 'servio2026'
   username.value = roleUser
-  password.value = 'servio2026'
-  completeSignIn(roleUser, 'servio2026')
+  password.value = demoPass
+  completeSignIn(roleUser, demoPass)
 }
 
 const handlePasswordUpdate = async () => {

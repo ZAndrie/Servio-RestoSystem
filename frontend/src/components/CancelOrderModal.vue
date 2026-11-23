@@ -2,7 +2,7 @@
   <BaseDialog
     :model-value="Boolean(order)"
     title="Cancel order"
-    :subtitle="order ? `${order.order_ref} · Table ${order.table_number} will be released.` : ''"
+    :subtitle="cancelSubtitle"
     max-width="sm"
     @update:model-value="handleOpenChange"
   >
@@ -62,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Order } from '@/types'
 import { useOrdersStore } from '@/stores/orders'
 import BaseDialog from '@/components/base/BaseDialog.vue'
@@ -79,6 +79,18 @@ const emit = defineEmits<{
 
 const ordersStore = useOrdersStore()
 const reason = ref('')
+
+const cancelSubtitle = computed(() => {
+  if (!props.order) return ''
+  const num = Number((props.order.table_number || '').replace(/\D/g, ''))
+  const tableLabel = Number.isFinite(num) && num > 0 ? `Table ${num}` : props.order.table_number
+  const otherActive = ordersStore
+    .getActiveOrdersForTable(props.order.table_id)
+    .filter((o) => o.id !== props.order!.id)
+  return otherActive.length === 0
+    ? `${props.order.order_ref} · ${tableLabel} will become available.`
+    : `${props.order.order_ref} · ${tableLabel} stays occupied for its other active order.`
+})
 
 const presets = [
   'Guest changed mind',

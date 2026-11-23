@@ -137,7 +137,7 @@
       title="Register staff member"
       subtitle="New accounts prompt for a password change on first sign-in."
     >
-      <form class="space-y-4" @submit.prevent="handleCreateUser">
+      <form id="staff-create-form" class="space-y-4" @submit.prevent="handleCreateUser">
         <div class="space-y-1.5">
           <label for="staff-name" class="block text-sm font-medium text-[var(--color-ink)]">
             Full name
@@ -203,10 +203,11 @@
           Cancel
         </BaseButton>
         <BaseButton
+          type="submit"
+          form="staff-create-form"
           variant="primary"
           size="md"
           :loading="isSubmitting"
-          @click="handleCreateUser"
         >
           Create account
         </BaseButton>
@@ -221,7 +222,7 @@
       max-width="sm"
       @update:model-value="(open) => { if (!open) resetTarget = null }"
     >
-      <div class="space-y-1.5">
+      <form id="staff-reset-form" class="space-y-1.5" @submit.prevent="confirmResetPassword">
         <label for="temp-reset-pass" class="block text-sm font-medium text-[var(--color-ink)]">
           Temporary password
         </label>
@@ -229,19 +230,23 @@
           id="temp-reset-pass"
           v-model="resetPasswordValue"
           type="text"
+          required
+          minlength="6"
+          placeholder="At least 6 characters"
           class="w-full min-h-[44px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] text-base font-mono text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
         />
-      </div>
+      </form>
 
       <template #footer>
         <BaseButton variant="ghost" size="md" @click="resetTarget = null">
           Cancel
         </BaseButton>
         <BaseButton
+          type="submit"
+          form="staff-reset-form"
           variant="primary"
           size="md"
           :loading="isSubmitting"
-          @click="confirmResetPassword"
         >
           Reset password
         </BaseButton>
@@ -316,6 +321,10 @@ const handleToggleActive = async (staff: User) => {
 
 const handleCreateUser = async () => {
   if (!newStaff.name.trim() || !newStaff.username.trim()) return
+  if (newStaff.password.trim().length < 6) {
+    toastStore.error('Password too short', 'Temporary password must be at least 6 characters.')
+    return
+  }
   isSubmitting.value = true
   try {
     const created = await userService.createUser({ ...newStaff })
@@ -339,10 +348,15 @@ const openResetModal = (staff: User) => {
 }
 
 const confirmResetPassword = async () => {
-  if (!resetTarget.value || !resetPasswordValue.value.trim()) return
+  if (!resetTarget.value) return
+  const cleanPass = resetPasswordValue.value.trim()
+  if (cleanPass.length < 6) {
+    toastStore.error('Password too short', 'Temporary password must be at least 6 characters.')
+    return
+  }
   isSubmitting.value = true
   try {
-    await userService.resetPassword(resetTarget.value.id, resetPasswordValue.value.trim())
+    await userService.resetPassword(resetTarget.value.id, cleanPass)
     toastStore.success('Password reset', `${resetTarget.value.name} will update it on next login.`)
     resetTarget.value = null
   } catch (err: unknown) {

@@ -47,6 +47,7 @@ export type PaymentMethod = 'cash' | 'gcash' | 'card'
 
 export interface OrderItem {
   id?: number
+  client_key?: string
   order_id?: number
   menu_item_id: number
   menu_item?: MenuItem

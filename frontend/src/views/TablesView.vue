@@ -240,28 +240,34 @@
     <BaseDialog
       :model-value="Boolean(selectedOccupied)"
       :title="selectedOccupied ? `${friendlyTableName(selectedOccupied.table.table_number)} · ${selectedOccupied.order?.payment_status === 'unpaid' ? 'Awaiting Payment' : 'Dining'}` : ''"
-      :subtitle="selectedOccupied?.order ? `${friendlyOrderStatus(selectedOccupied.order)} · ${selectedOccupied.order.items.reduce((s, i) => s + i.quantity, 0)} items · ${formatCurrency(selectedOccupied.order.total)}` : ''"
+      :subtitle="selectedOccupied?.order ? `${friendlyOrderStatus(selectedOccupied.order)} · ${selectedTableOrders.reduce((s, o) => s + o.items.reduce((q, i) => q + i.quantity, 0), 0)} items · ${formatCurrency(selectedTableOrders.reduce((s, o) => s + o.total, 0))}` : ''"
       max-width="sm"
-      @update:model-value="(open) => { if (!open) selectedOccupied = null }"
+      @update:model-value="(open) => { if (!open) closeOccupiedModal() }"
     >
       <div v-if="selectedOccupied?.order" class="space-y-4">
-        <div class="rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] p-3.5 space-y-1.5">
+        <div
+          v-for="ord in selectedTableOrders"
+          :key="ord.id"
+          class="rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] p-3.5 space-y-1.5"
+        >
           <div class="flex items-center justify-between gap-2">
-            <p class="label-tracked text-[var(--color-muted)]">Order summary</p>
+            <p class="label-tracked text-[var(--color-muted)]">
+              Order #{{ ord.order_ref.replace(/^#?ORD-?/i, '') }}
+            </p>
             <span
               class="px-2.5 py-0.5 rounded-[var(--radius-pill)] label-tracked"
               :class="
-                selectedOccupied.order.payment_status === 'unpaid'
+                ord.payment_status === 'unpaid'
                   ? 'bg-[var(--color-honey-bg)] text-[var(--color-honey-ink)]'
                   : 'bg-[var(--color-leaf-bg)] text-[var(--color-leaf-ink)]'
               "
             >
-              {{ selectedOccupied.order.payment_status === 'unpaid' ? 'Unpaid' : 'Paid upfront' }}
+              {{ ord.payment_status === 'unpaid' ? 'Unpaid' : friendlyOrderStatus(ord) }}
             </span>
           </div>
           <ul class="space-y-1 text-base text-[var(--color-ink)]">
             <li
-              v-for="(item, idx) in selectedOccupied.order.items"
+              v-for="(item, idx) in ord.items"
               :key="`${item.menu_item_id}-${idx}`"
               class="flex justify-between gap-2"
             >
@@ -296,13 +302,62 @@
               Order Extra Food (Pay First)
             </BaseButton>
 
+            <!-- Guard: Prevent accidentally clearing a table while food is still cooking or waiting at counter -->
+            <template v-if="selectedHasUnservedFood">
+              <div
+                v-if="!confirmForceClear"
+                class="rounded-[var(--radius-input)] bg-[var(--color-honey-bg)] border border-[var(--color-honey)]/50 p-3 space-y-2"
+              >
+                <p class="text-sm font-semibold text-[var(--color-honey-ink)]">
+                  Food is still active in the kitchen or at the pickup counter.
+                </p>
+                <BaseButton
+                  variant="ghost"
+                  size="sm"
+                  custom-class="w-full"
+                  @click="confirmForceClear = true"
+                >
+                  Guests already left? Clear table anyway...
+                </BaseButton>
+              </div>
+
+              <div
+                v-else
+                class="rounded-[var(--radius-input)] bg-[var(--color-berry-bg)] border border-[var(--color-berry)]/45 p-3 space-y-2.5"
+              >
+                <p class="text-sm font-bold text-[var(--color-berry-ink)]">
+                  Confirm clearing {{ friendlyTableName(selectedOccupied.table.table_number) }}? Active kitchen tickets will be closed.
+                </p>
+                <div class="flex items-center gap-2">
+                  <BaseButton
+                    variant="ghost"
+                    size="sm"
+                    custom-class="flex-1"
+                    @click="confirmForceClear = false"
+                  >
+                    Keep open
+                  </BaseButton>
+                  <BaseButton
+                    variant="danger"
+                    size="sm"
+                    :loading="ordersStore.isSubmitting"
+                    custom-class="flex-1"
+                    @click="clearOccupiedTable(true)"
+                  >
+                    Yes, clear table
+                  </BaseButton>
+                </div>
+              </div>
+            </template>
+
             <BaseButton
+              v-else
               variant="dark"
               size="lg"
               icon="check"
               :loading="ordersStore.isSubmitting"
               custom-class="w-full"
-              @click="clearOccupiedTable"
+              @click="clearOccupiedTable(false)"
             >
               Clear Table (Guests Left)
             </BaseButton>
@@ -351,6 +406,22 @@ const cartStore = useCartStore()
 
 const statusFilter = ref<'all' | 'available' | 'occupied'>('all')
 const selectedOccupied = ref<TableEntry | null>(null)
+const confirmForceClear = ref(false)
+
+const selectedTableOrders = computed(() =>
+  selectedOccupied.value ? ordersStore.getActiveOrdersForTable(selectedOccupied.value.table.id) : [],
+)
+
+const selectedHasUnservedFood = computed(() =>
+  selectedOccupied.value
+    ? ordersStore.hasUnservedKitchenOrdersForTable(selectedOccupied.value.table.id)
+    : false,
+)
+
+const closeOccupiedModal = () => {
+  selectedOccupied.value = null
+  confirmForceClear.value = false
+}
 
 onMounted(async () => {
   await tablesStore.fetchTables()
@@ -488,6 +559,7 @@ const handleTableTap = (entry: TableEntry) => {
       router.push(`/payment/${entry.order!.id}`)
     })
   } else {
+    confirmForceClear.value = false
     selectedOccupied.value = entry
   }
 }
@@ -496,7 +568,7 @@ const addFoodToOccupied = () => {
   if (!selectedOccupied.value?.order) return
   const { table, order } = selectedOccupied.value
   cartStore.loadForAddon(table.id, order.id, order.order_ref)
-  selectedOccupied.value = null
+  closeOccupiedModal()
   executeViewTransition(() => {
     router.push('/pos')
   })
@@ -505,20 +577,26 @@ const addFoodToOccupied = () => {
 const payOccupiedBill = () => {
   if (!selectedOccupied.value?.order) return
   const id = selectedOccupied.value.order.id
-  selectedOccupied.value = null
+  closeOccupiedModal()
   executeViewTransition(() => {
     router.push(`/payment/${id}`)
   })
 }
 
-const clearOccupiedTable = async () => {
+const clearOccupiedTable = async (force: boolean = false) => {
   if (!selectedOccupied.value) return
-  const ok = await ordersStore.clearTableAfterDining(selectedOccupied.value.table.id)
-  if (ok) selectedOccupied.value = null
+  const clearedTableId = selectedOccupied.value.table.id
+  const ok = await ordersStore.clearTableAfterDining(clearedTableId, force)
+  if (ok) {
+    if (cartStore.selectedTableId === clearedTableId) {
+      cartStore.resetAll()
+    }
+    closeOccupiedModal()
+  }
 }
 
 const viewOccupiedOrder = () => {
-  selectedOccupied.value = null
+  closeOccupiedModal()
   executeViewTransition(() => {
     router.push('/orders')
   })

@@ -155,7 +155,7 @@
             </BaseButton>
 
             <BaseButton
-              v-if="order.status === 'served'"
+              v-if="order.status === 'served' && !ordersStore.hasUnservedKitchenOrdersForTable(order.table_id)"
               variant="dark"
               size="md"
               icon="check"
@@ -210,7 +210,7 @@ import CancelOrderModal from '@/components/CancelOrderModal.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 
-type FilterKey = 'all' | 'ready' | 'preparing' | 'pending' | 'served'
+type FilterKey = 'all' | 'unpaid' | 'ready' | 'preparing' | 'pending' | 'served'
 
 const router = useRouter()
 const ordersStore = useOrdersStore()
@@ -239,24 +239,30 @@ const readyBannerTitle = computed(() => {
 
 const filterTabs = computed<{ label: string; value: FilterKey; count: number }[]>(() => [
   { label: 'All Orders', value: 'all', count: ordersStore.activeOrders.length },
+  { label: 'Unpaid', value: 'unpaid', count: ordersStore.unpaidOrders.length },
   { label: 'Ready', value: 'ready', count: ordersStore.kdsReadyOrders.length },
   { label: 'Cooking', value: 'preparing', count: ordersStore.kdsPreparingOrders.length },
   { label: 'Waiting', value: 'pending', count: ordersStore.kdsPendingOrders.length },
-  {
-    label: 'Served',
-    value: 'served',
-    count: ordersStore.activeOrders.filter((o) => o.status === 'served').length,
-  },
+  { label: 'Served', value: 'served', count: ordersStore.servedOrders.length },
 ])
 
 const filteredOrders = computed(() => {
-  const active = ordersStore.activeOrders
-  if (activeFilter.value === 'all') {
-    // Prioritize Ready tickets at the top for waiter glanceability
-    const rank: Record<string, number> = { ready: 0, preparing: 1, pending: 2, served: 3 }
-    return [...active].sort((a, b) => (rank[a.status] ?? 9) - (rank[b.status] ?? 9))
+  if (activeFilter.value === 'unpaid') return ordersStore.unpaidOrders
+  if (activeFilter.value === 'ready') return ordersStore.kdsReadyOrders
+  if (activeFilter.value === 'preparing') return ordersStore.kdsPreparingOrders
+  if (activeFilter.value === 'pending') return ordersStore.kdsPendingOrders
+  if (activeFilter.value === 'served') return ordersStore.servedOrders
+
+  // Prioritize Ready (food at counter) and Unpaid (waiting at register) at the top
+  const rank = (o: Order) => {
+    if (o.payment_status === 'unpaid') return 1
+    if (o.status === 'ready') return 0
+    if (o.status === 'preparing') return 2
+    if (o.status === 'pending') return 3
+    if (o.status === 'served') return 4
+    return 9
   }
-  return active.filter((o) => o.status === activeFilter.value)
+  return [...ordersStore.activeOrders].sort((a, b) => rank(a) - rank(b))
 })
 
 const addMoreItems = (order: Order) => {
@@ -274,10 +280,14 @@ const goToCheckout = (orderId: number) => {
 
 const handleCancelOrder = async (reason: string) => {
   if (!orderToCancel.value) return
+  if (!authStore.user) {
+    router.push('/login')
+    return
+  }
   const ok = await ordersStore.cancelOrder(
     orderToCancel.value.id,
     reason,
-    authStore.user?.id || 2,
+    authStore.user.id,
   )
   if (ok) orderToCancel.value = null
 }

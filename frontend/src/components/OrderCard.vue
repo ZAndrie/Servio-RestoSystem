@@ -38,15 +38,17 @@
               v-if="!kds && order.payment_status === 'unpaid'"
               class="inline-flex items-center px-2.5 py-1 rounded-[var(--radius-pill)] bg-[var(--color-honey-bg)] text-[var(--color-honey-ink)] border border-[var(--color-honey)]/50 label-tracked"
             >
-              Unpaid
+              Awaiting Payment
             </span>
-            <span
-              v-else-if="!kds && order.payment_status === 'paid'"
-              class="inline-flex items-center px-2.5 py-1 rounded-[var(--radius-pill)] bg-[var(--color-leaf-bg)] text-[var(--color-leaf-ink)] border border-[var(--color-leaf)]/40 label-tracked"
-            >
-              Paid
-            </span>
-            <StatusBadge :status="order.status" :dark="kds" compact />
+            <template v-else>
+              <span
+                v-if="!kds && order.payment_status === 'paid'"
+                class="inline-flex items-center px-2.5 py-1 rounded-[var(--radius-pill)] bg-[var(--color-leaf-bg)] text-[var(--color-leaf-ink)] border border-[var(--color-leaf)]/40 label-tracked"
+              >
+                Paid
+              </span>
+              <StatusBadge :status="order.status" :dark="kds" compact />
+            </template>
           </div>
 
           <span
@@ -180,6 +182,7 @@ const elapsedClock = computed(() => formatElapsedClock(props.order.created_at, n
 
 const isOverdue = computed(
   () =>
+    props.order.payment_status === 'paid' &&
     ['pending', 'preparing'].includes(props.order.status) &&
     getElapsedMinutes(props.order.created_at, now.value) >= 10,
 )

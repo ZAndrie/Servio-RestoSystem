@@ -58,7 +58,7 @@
       class="rounded-[var(--radius-card)] bg-[var(--color-surface)] border border-[var(--color-line)] overflow-hidden grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-[var(--color-line)]"
     >
       <div class="md:col-span-5 p-6 bg-[var(--color-bg)]/50 space-y-1.5">
-        <span class="label-tracked text-[var(--color-muted)]">Today's sales</span>
+        <span class="label-tracked text-[var(--color-muted)]">{{ salesPeriodLabel }}</span>
         <p class="servio-total-numeral text-2xl font-bold text-[var(--color-accent)]">
           {{ formatCurrency(totalRevenue) }}
         </p>
@@ -156,7 +156,7 @@
               <tbody class="divide-y divide-[var(--color-line)]/70">
                 <tr v-for="order in paidOrders" :key="order.id">
                   <td class="py-2.5 font-mono tabular-nums text-[var(--color-ink)]">
-                    {{ order.order_ref }} · {{ order.table_number }}
+                    {{ order.order_ref }} · {{ friendlyTableName(order.table_number) }}
                   </td>
                   <td class="py-2.5 uppercase text-[var(--color-muted)]">
                     {{ order.payment_method }}
@@ -258,8 +258,8 @@
           </thead>
           <tbody class="divide-y divide-[var(--color-line)]">
             <tr v-for="order in ordersStore.activeOrders" :key="order.id">
-              <td class="py-3.5 px-5 font-mono font-semibold tabular-nums text-[var(--color-ink)]">
-                {{ order.table_number }}
+              <td class="py-3.5 px-5 font-semibold tabular-nums text-[var(--color-ink)]">
+                {{ friendlyTableName(order.table_number) }}
               </td>
               <td class="py-3.5 px-5 font-mono text-sm tabular-nums text-[var(--color-muted)]">
                 {{ order.order_ref }}
@@ -268,7 +268,13 @@
                 {{ order.server_name }}
               </td>
               <td class="py-3.5 px-5">
-                <StatusBadge :status="order.status" compact />
+                <span
+                  v-if="order.payment_status === 'unpaid'"
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-[var(--radius-pill)] bg-[var(--color-honey-bg)] text-[var(--color-honey-ink)] border border-[var(--color-honey)]/50 label-tracked"
+                >
+                  Unpaid
+                </span>
+                <StatusBadge v-else :status="order.status" compact />
               </td>
               <td class="py-3.5 px-5 text-right font-semibold tabular-nums text-[var(--color-ink)]">
                 {{ formatCurrency(order.total) }}
@@ -282,7 +288,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useOrdersStore } from '@/stores/orders'
@@ -317,9 +323,25 @@ watch(
 
 onMounted(async () => {
   await Promise.all([ordersStore.fetchOrders(), tablesStore.fetchTables()])
+  ordersStore.startPolling(3500)
+})
+
+onUnmounted(() => {
+  ordersStore.stopPolling()
 })
 
 const greeting = computed(() => getManilaGreeting(authStore.user?.name))
+
+const friendlyTableName = (tableNumber: string) => {
+  const num = Number((tableNumber || '').replace(/\D/g, ''))
+  return Number.isFinite(num) && num > 0 ? `Table ${num}` : tableNumber
+}
+
+const salesPeriodLabel = computed(() =>
+  startDate.value === todayIso && endDate.value === todayIso
+    ? "Today's sales"
+    : 'Selected period sales',
+)
 
 const todayLabel = computed(() =>
   new Date().toLocaleDateString('en-PH', {
@@ -330,7 +352,16 @@ const todayLabel = computed(() =>
   }),
 )
 
-const paidOrders = computed(() => ordersStore.paidOrders)
+const paidOrders = computed(() => {
+  const start = startDate.value
+  const end = endDate.value
+  return ordersStore.paidOrders.filter((order) => {
+    const orderIso = getManilaDateISO(new Date(order.paid_at || order.created_at))
+    if (start && orderIso < start) return false
+    if (end && orderIso > end) return false
+    return true
+  })
+})
 
 const totalRevenue = computed(() =>
   paidOrders.value.reduce((sum, o) => sum + o.total, 0),

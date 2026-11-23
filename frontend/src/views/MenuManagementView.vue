@@ -367,10 +367,10 @@
         </BaseButton>
         <BaseButton
           type="submit"
+          form="dish-editor-form"
           variant="primary"
           size="md"
           :loading="isSaving"
-          @click="saveDish"
         >
           {{ form.id ? 'Save changes' : 'Add to menu' }}
         </BaseButton>
@@ -529,15 +529,23 @@ const openEditor = (item?: MenuItem) => {
 }
 
 const saveDish = async () => {
-  if (!form.name.trim()) return
+  const cleanName = form.name.trim()
+  const numericPrice = Number(form.price)
+  if (!cleanName || !Number.isFinite(numericPrice) || numericPrice <= 0) {
+    uploadError.value = !cleanName
+      ? 'Please enter a dish name.'
+      : 'Please enter a valid price greater than ₱0.'
+    return
+  }
+  uploadError.value = null
   isSaving.value = true
   try {
     const ok = await menuStore.saveItem(
       {
         id: form.id,
-        name: form.name,
+        name: cleanName,
         category_id: form.category_id,
-        price: Number(form.price),
+        price: numericPrice,
         description: form.description,
         is_popular: form.is_popular,
         image: form.image,

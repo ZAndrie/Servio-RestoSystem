@@ -23,7 +23,13 @@
             <span class="text-base font-bold text-[var(--color-ink)] truncate">
               {{ headline }}
             </span>
-            <StatusBadge v-if="activeOrder" :status="activeOrder.status" compact />
+            <span
+              v-if="activeOrder && activeOrder.payment_status === 'unpaid'"
+              class="inline-flex items-center px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--color-honey-bg)] text-[var(--color-honey-ink)] border border-[var(--color-honey)]/50 label-tracked"
+            >
+              Unpaid
+            </span>
+            <StatusBadge v-else-if="activeOrder" :status="activeOrder.status" compact />
           </div>
           <p class="text-sm text-[var(--color-muted)] truncate tabular-nums">
             {{ subline }}
@@ -102,7 +108,7 @@
       </template>
 
       <p v-else class="text-sm text-[var(--color-muted)] prose-measure">
-        No active order on <strong class="text-[var(--color-ink)]">{{ friendlyTable }}</strong> yet. Tap dishes above and press Send to Kitchen.
+        No active order on <strong class="text-[var(--color-ink)]">{{ friendlyTable }}</strong> yet. Tap dishes above and press Proceed to Payment.
       </p>
     </div>
   </section>
@@ -142,7 +148,8 @@ const elapsedClock = computed(() =>
 
 const isOverdue = computed(() =>
   props.activeOrder
-    ? ['pending', 'preparing'].includes(props.activeOrder.status) &&
+    ? props.activeOrder.payment_status === 'paid' &&
+      ['pending', 'preparing'].includes(props.activeOrder.status) &&
       getElapsedMinutes(props.activeOrder.created_at, now.value) >= 10
     : false,
 )

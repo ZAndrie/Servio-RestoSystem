@@ -329,6 +329,7 @@ body {
 
   body * {
     visibility: hidden;
+    transform: none !important;
   }
 
   .receipt-print-area,

@@ -22,15 +22,38 @@ export const useTablesStore = defineStore('tables', {
   },
 
   actions: {
-    async fetchTables() {
-      this.isLoading = true
-      this.error = null
+    async fetchTables(silent: boolean = false) {
+      if (!silent) {
+        this.isLoading = true
+        this.error = null
+      }
       try {
-        this.tables = await tableService.getTables()
+        const incoming = await tableService.getTables()
+        if (this.tables.length === 0) {
+          this.tables = incoming
+        } else {
+          for (const inc of incoming) {
+            const existing = this.tables.find((t) => t.id === inc.id)
+            if (existing) {
+              if (existing.status !== inc.status) existing.status = inc.status
+              if (existing.capacity !== inc.capacity) existing.capacity = inc.capacity
+              if (existing.active_order_id !== inc.active_order_id) {
+                existing.active_order_id = inc.active_order_id
+              }
+              if (existing.active_order_ref !== inc.active_order_ref) {
+                existing.active_order_ref = inc.active_order_ref
+              }
+            } else {
+              this.tables.push(inc)
+            }
+          }
+        }
       } catch (err: unknown) {
-        this.error = (err as Error)?.message || 'Unable to load dining tables.'
+        if (!silent) {
+          this.error = (err as Error)?.message || 'Unable to load dining tables.'
+        }
       } finally {
-        this.isLoading = false
+        if (!silent) this.isLoading = false
       }
     },
 
@@ -44,14 +67,22 @@ export const useTablesStore = defineStore('tables', {
       tableService.occupyTable(tableId, orderId, orderRef).catch(() => {})
     },
 
-    releaseTable(tableId: number) {
+    markTableAvailableLocally(tableId: number) {
       const table = this.tables.find((t) => t.id === tableId)
       if (table) {
         table.status = 'available'
         table.active_order_id = null
         table.active_order_ref = null
       }
-      tableService.releaseTable(tableId).catch(() => {})
+    },
+
+    async releaseTable(tableId: number, force: boolean = false) {
+      this.markTableAvailableLocally(tableId)
+      try {
+        await tableService.releaseTable(tableId, force)
+      } catch {
+        // Error surfaced by caller or next poll
+      }
     },
   },
 })

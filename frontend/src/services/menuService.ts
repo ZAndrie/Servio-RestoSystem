@@ -13,6 +13,22 @@ const readFileAsDataUrl = (file: File): Promise<string> =>
     reader.readAsDataURL(file)
   })
 
+const normalizeMenuItem = (raw: Record<string, unknown>): MenuItem => {
+  const categoryId = Number(raw.category_id ?? 1)
+  const defaultArtwork = categoryId === 3 ? 'glass' : categoryId === 2 ? 'dessert' : 'bowl'
+  return {
+    id: Number(raw.id),
+    category_id: categoryId,
+    name: String(raw.name ?? ''),
+    description: raw.description ? String(raw.description) : '',
+    price: Number(raw.price ?? 0),
+    is_available: Boolean(raw.is_available),
+    is_popular: Boolean(raw.is_popular),
+    image: raw.image ? String(raw.image) : undefined,
+    artwork: (raw.artwork as MenuItem['artwork']) || defaultArtwork,
+  }
+}
+
 export const menuService = {
   async getCategories(): Promise<Category[]> {
     if (USE_MOCK) {
@@ -20,7 +36,7 @@ export const menuService = {
       return JSON.parse(JSON.stringify(memoryCategories))
     }
     const res = await api.get('/categories')
-    return res.data
+    return Array.isArray(res.data) ? res.data : []
   },
 
   async getMenuItems(): Promise<MenuItem[]> {
@@ -29,10 +45,14 @@ export const menuService = {
       return JSON.parse(JSON.stringify(memoryItems))
     }
     const res = await api.get('/menu-items')
-    return res.data
+    return Array.isArray(res.data) ? res.data.map(normalizeMenuItem) : []
   },
 
-  async toggleAvailability(itemId: number, shouldFail: boolean = false): Promise<boolean> {
+  async toggleAvailability(
+    itemId: number,
+    nextAvailable: boolean,
+    shouldFail: boolean = false,
+  ): Promise<boolean> {
     if (USE_MOCK) {
       await new Promise((r) => setTimeout(r, 110))
       if (shouldFail) {
@@ -40,14 +60,16 @@ export const menuService = {
       }
       const item = memoryItems.find((i) => i.id === itemId)
       if (item) {
-        item.is_available = !item.is_available
+        item.is_available = nextAvailable
         return item.is_available
       }
       return false
     }
 
-    const res = await api.patch(`/menu-items/${itemId}/availability`)
-    return res.data.is_available
+    const res = await api.patch(`/menu-items/${itemId}/availability`, {
+      is_available: nextAvailable,
+    })
+    return Boolean(res.data.is_available)
   },
 
   async saveMenuItem(item: Partial<MenuItem>, imageFile?: File | null): Promise<MenuItem> {
@@ -64,6 +86,7 @@ export const menuService = {
           memoryItems[idx] = {
             ...memoryItems[idx],
             ...item,
+            price: Number(item.price ?? memoryItems[idx].price),
             image: resolvedImage,
           } as MenuItem
           return JSON.parse(JSON.stringify(memoryItems[idx]))
@@ -103,20 +126,23 @@ export const menuService = {
         const res = await api.post(`/menu-items/${item.id}`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         })
-        return res.data
+        return normalizeMenuItem(res.data)
       }
 
       const res = await api.post('/menu-items', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      return res.data
+      return normalizeMenuItem(res.data)
     }
 
     if (item.id) {
-      const res = await api.put(`/menu-items/${item.id}`, item)
-      return res.data
+      const res = await api.put(`/menu-items/${item.id}`, {
+        ...item,
+        remove_image: item.image === undefined,
+      })
+      return normalizeMenuItem(res.data)
     }
     const res = await api.post('/menu-items', item)
-    return res.data
+    return normalizeMenuItem(res.data)
   },
 }

@@ -15,7 +15,7 @@
           <button
             type="button"
             class="min-h-[44px] px-3.5 rounded-[var(--radius-pill)] bg-[var(--color-surface)] border border-[var(--color-line)] hover:border-[var(--color-line-strong)] text-[var(--color-ink)] inline-flex items-center gap-1.5 transition-ui cursor-pointer"
-            @click="router.push('/pos')"
+            @click="goBackToTakeOrder"
           >
             <span>2. Take Order</span>
           </button>
@@ -188,6 +188,18 @@
 
           <!-- Itemized Order Review -->
           <div class="px-6 py-4 border-b border-[var(--color-line)]">
+            <div class="flex items-center justify-between gap-2 pb-2">
+              <span class="label-tracked text-[var(--color-muted)]">Order items</span>
+              <BaseButton
+                variant="ghost"
+                size="sm"
+                icon="note"
+                :disabled="ordersStore.isSubmitting"
+                @click="editUnpaidOrder"
+              >
+                Edit items
+              </BaseButton>
+            </div>
             <ul class="divide-y divide-[var(--color-line)]/70">
               <li
                 v-for="(item, idx) in selectedOrder.items"
@@ -366,12 +378,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { Order, PaymentMethod } from '@/types'
 import { useOrdersStore } from '@/stores/orders'
 import { useTablesStore } from '@/stores/tables'
 import { useAuthStore } from '@/stores/auth'
+import { useCartStore } from '@/stores/cart'
 import { formatCurrency } from '@/utils/format'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseDialog from '@/components/base/BaseDialog.vue'
@@ -383,10 +396,11 @@ const router = useRouter()
 const ordersStore = useOrdersStore()
 const tablesStore = useTablesStore()
 const authStore = useAuthStore()
+const cartStore = useCartStore()
 
 const selectedOrderId = ref<number | null>(null)
 const selectedMethod = ref<PaymentMethod | null>(null)
-const cashTendered = ref<number>(0)
+const cashTendered = ref<number | null>(null)
 const receiptOrder = ref<Order | null>(null)
 const justCompletedPayment = ref(false)
 
@@ -407,6 +421,11 @@ const syncSelectionFromRoute = () => {
   const paramId = Number(route.params.id)
   if (paramId && unpaidOrders.value.some((o) => o.id === paramId)) {
     selectedOrderId.value = paramId
+  } else if (
+    selectedOrderId.value &&
+    unpaidOrders.value.some((o) => o.id === selectedOrderId.value)
+  ) {
+    // Preserve current selection while polling adds/updates other orders
   } else if (unpaidOrders.value.length > 0) {
     selectedOrderId.value = unpaidOrders.value[0].id
   } else {
@@ -417,9 +436,15 @@ const syncSelectionFromRoute = () => {
 onMounted(async () => {
   await Promise.all([ordersStore.fetchOrders(), tablesStore.fetchTables()])
   syncSelectionFromRoute()
+  ordersStore.startPolling(3500)
+})
+
+onUnmounted(() => {
+  ordersStore.stopPolling()
 })
 
 watch(() => route.params.id, syncSelectionFromRoute)
+watch(() => unpaidOrders.value.length, syncSelectionFromRoute)
 
 const selectedOrder = computed(() => {
   if (!selectedOrderId.value) return null
@@ -428,7 +453,7 @@ const selectedOrder = computed(() => {
 
 watch(selectedOrderId, () => {
   selectedMethod.value = null
-  cashTendered.value = 0
+  cashTendered.value = null
 })
 
 const selectOrder = (id: number) => {
@@ -436,11 +461,26 @@ const selectOrder = (id: number) => {
   router.replace(`/payment/${id}`)
 }
 
+const editUnpaidOrder = () => {
+  if (!selectedOrder.value) return
+  cartStore.loadUnpaidForEdit(selectedOrder.value)
+  router.push('/pos')
+}
+
+const goBackToTakeOrder = () => {
+  if (selectedOrder.value) {
+    editUnpaidOrder()
+  } else if (cartStore.selectedTableId) {
+    router.push('/pos')
+  } else {
+    router.push('/tables')
+  }
+}
+
 const chooseMethod = (method: PaymentMethod) => {
   selectedMethod.value = method
-  if (selectedOrder.value) {
-    cashTendered.value = selectedOrder.value.total
-  }
+  // Require cashier to tap Exact, a bill preset, or type cash received so change is never skipped accidentally
+  cashTendered.value = method === 'cash' ? null : (selectedOrder.value?.total ?? null)
 }
 
 const cashPresets = computed(() => {
@@ -455,8 +495,10 @@ const cashPresets = computed(() => {
 })
 
 const isCashSufficient = computed(() => {
-  if (!selectedOrder.value) return false
-  return Number(cashTendered.value || 0) >= selectedOrder.value.total
+  if (!selectedOrder.value || cashTendered.value === null || String(cashTendered.value) === '') {
+    return false
+  }
+  return Number(cashTendered.value) >= selectedOrder.value.total
 })
 
 const canConfirmPayment = computed(() => {
@@ -467,6 +509,7 @@ const canConfirmPayment = computed(() => {
 
 const handleConfirmPayment = async () => {
   if (!selectedOrder.value || !selectedMethod.value || !canConfirmPayment.value) return
+  const paidTableId = selectedOrder.value.table_id
   const tender =
     selectedMethod.value === 'cash' ? Number(cashTendered.value) : selectedOrder.value.total
 
@@ -476,22 +519,33 @@ const handleConfirmPayment = async () => {
     tender,
   )
   if (settled) {
+    if (cartStore.selectedTableId === paidTableId) {
+      cartStore.resetAll()
+    }
     receiptOrder.value = settled
     justCompletedPayment.value = true
     selectedMethod.value = null
-    cashTendered.value = 0
+    cashTendered.value = null
     selectedOrderId.value = unpaidOrders.value[0]?.id ?? null
   }
 }
 
 const handleCancelUnpaid = async () => {
   if (!selectedOrder.value) return
+  if (!authStore.user) {
+    router.push('/login')
+    return
+  }
+  const cancelledTableId = selectedOrder.value.table_id
   const ok = await ordersStore.cancelOrder(
     selectedOrder.value.id,
     'Cancelled before payment',
-    authStore.user?.id || 2,
+    authStore.user.id,
   )
   if (ok) {
+    if (cartStore.selectedTableId === cancelledTableId) {
+      cartStore.resetAll()
+    }
     selectedOrderId.value = unpaidOrders.value[0]?.id ?? null
     if (!selectedOrderId.value) {
       router.push('/tables')

@@ -53,6 +53,12 @@
             >
               {{ item.badge }}
             </span>
+            <span
+              v-if="item.badge && item.badge > 0"
+              class="xl:hidden absolute top-1 right-1 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-[var(--radius-pill)] text-[10px] font-bold tabular-nums bg-[var(--color-leaf)] text-[var(--color-kds-bg)]"
+            >
+              {{ item.badge }}
+            </span>
           </router-link>
         </nav>
       </div>
@@ -115,6 +121,12 @@
         >
           <BaseIcon :name="item.icon" :size="18" custom-class="optical-nav-icon" />
           <span class="truncate max-w-full">{{ item.shortLabel || item.label }}</span>
+          <span
+            v-if="item.badge && item.badge > 0"
+            class="absolute top-1 right-1.5 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-[var(--radius-pill)] text-[10px] font-bold tabular-nums bg-[var(--color-leaf)] text-[var(--color-kds-bg)]"
+          >
+            {{ item.badge }}
+          </span>
         </router-link>
 
         <button
@@ -206,12 +218,15 @@ const isNavActive = (item: NavItem) => {
   if (item.matchPrefix === '/payment') {
     return route.path.startsWith('/payment')
   }
+  if (authStore.isAdmin && item.matchPrefix === '/tables') {
+    return ['/tables', '/pos', '/payment', '/orders'].some((p) => route.path.startsWith(p))
+  }
   return route.path === item.to
 }
 
 const handleLogout = async () => {
   ordersStore.stopPolling()
-  cartStore.clearCart()
+  cartStore.resetAll()
   await authStore.logout()
   router.push('/login')
 }

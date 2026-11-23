@@ -181,6 +181,7 @@ const props = withDefaults(
     variant?: 'search' | 'pill'
     allowClear?: boolean
     filterOnly?: boolean
+    clearOnSelect?: boolean
     emptyText?: string
     inputClass?: string
     viewTransitionName?: string
@@ -192,6 +193,7 @@ const props = withDefaults(
     variant: 'search',
     allowClear: true,
     filterOnly: false,
+    clearOnSelect: false,
     emptyText: 'No matching items found.',
     inputClass: '',
     viewTransitionName: undefined,
@@ -331,10 +333,18 @@ const handleKeyDown = (e: KeyboardEvent) => {
 
 const selectOption = (option: ComboboxOption) => {
   if (option.disabled) return
+  if (props.clearOnSelect) {
+    emit('select', option)
+    emit('update:modelValue', props.filterOnly ? '' : null)
+    isTyping.value = false
+    query.value = ''
+    isOpen.value = false
+    return
+  }
   emit('update:modelValue', option.value)
   emit('select', option)
   isTyping.value = false
-  query.value = props.filterOnly ? '' : option.label
+  query.value = option.label
   isOpen.value = false
 }
 

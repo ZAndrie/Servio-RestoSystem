@@ -27,9 +27,25 @@
       </button>
     </div>
 
-    <!-- Add-on Mode Context Strip -->
+    <!-- Context Strip: Editing Unpaid Order OR Adding Extra Food -->
     <div
-      v-if="cartStore.isAddonMode"
+      v-if="cartStore.isEditingUnpaid"
+      class="mx-5 mt-3 px-3.5 py-2.5 rounded-[var(--radius-input)] bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/40 flex items-center justify-between gap-2 text-sm text-[var(--color-ink)]"
+    >
+      <span class="font-semibold truncate">
+        Editing unpaid order for {{ friendlyTableName }}
+      </span>
+      <button
+        type="button"
+        class="touch-extend-44 text-xs font-bold underline cursor-pointer shrink-0"
+        @click="$emit('cancel-edit')"
+      >
+        Back to bill
+      </button>
+    </div>
+
+    <div
+      v-else-if="cartStore.isAddonMode"
       class="mx-5 mt-3 px-3.5 py-2.5 rounded-[var(--radius-input)] bg-[var(--color-honey-bg)] border border-[var(--color-honey)]/50 flex items-center justify-between gap-2 text-sm text-[var(--color-honey-ink)]"
     >
       <span class="font-semibold truncate">
@@ -64,7 +80,7 @@
       <ul v-else class="divide-y divide-[var(--color-line)]">
         <li
           v-for="(item, index) in cartStore.items"
-          :key="`${item.menu_item_id}-${index}`"
+          :key="itemKey(item, index)"
           class="py-3.5 first:pt-0 last:pb-0 space-y-2.5"
         >
           <div class="flex items-start gap-3">
@@ -77,9 +93,17 @@
 
             <div class="min-w-0 flex-1">
               <div class="flex items-start justify-between gap-2">
-                <p class="text-base font-bold text-[var(--color-ink)] leading-order-line truncate">
-                  {{ item.name }}
-                </p>
+                <div class="min-w-0">
+                  <p class="text-base font-bold text-[var(--color-ink)] leading-order-line truncate">
+                    {{ item.name }}
+                  </p>
+                  <span
+                    v-if="cartStore.isItemSoldOut(item.menu_item_id)"
+                    class="inline-flex items-center mt-0.5 px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--color-berry-bg)] text-[var(--color-berry-ink)] label-tracked"
+                  >
+                    Sold out · remove
+                  </span>
+                </div>
 
                 <button
                   type="button"
@@ -112,7 +136,8 @@
 
                   <button
                     type="button"
-                    class="touch-extend-44 w-8 h-8 rounded-[var(--radius-input)] bg-[var(--color-surface-alt)] border border-[var(--color-line)] hover:border-[var(--color-line-strong)] flex items-center justify-center text-[var(--color-ink)] active:translate-y-px transition-ui cursor-pointer"
+                    :disabled="cartStore.isItemSoldOut(item.menu_item_id)"
+                    class="touch-extend-44 w-8 h-8 rounded-[var(--radius-input)] bg-[var(--color-surface-alt)] border border-[var(--color-line)] hover:border-[var(--color-line-strong)] flex items-center justify-center text-[var(--color-ink)] active:translate-y-px transition-ui cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     :aria-label="`Increase quantity of ${item.name}`"
                     @click="cartStore.updateQuantity(index, 1)"
                   >
@@ -130,10 +155,10 @@
           <!-- Optional Kitchen Note (Progressive Disclosure) -->
           <div>
             <button
-              v-if="!openNotes[index] && !item.notes"
+              v-if="!openNotes[itemKey(item, index)] && !item.notes"
               type="button"
               class="touch-extend-44 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-ui cursor-pointer"
-              @click="openNotes[index] = true"
+              @click="openNotes[itemKey(item, index)] = true"
             >
               <BaseIcon name="note" :size="13" />
               <span>Add kitchen note</span>
@@ -153,7 +178,7 @@
                 type="button"
                 class="touch-extend-44 w-8 h-8 rounded-[var(--radius-input)] flex items-center justify-center text-[var(--color-muted)] hover:text-[var(--color-ink)] cursor-pointer"
                 aria-label="Hide note input"
-                @click="openNotes[index] = false"
+                @click="openNotes[itemKey(item, index)] = false"
               >
                 <BaseIcon name="x" :size="14" />
               </button>
@@ -192,7 +217,14 @@
           </span>
         </div>
 
-        <p class="text-xs text-[var(--color-muted)] text-pretty">
+        <p
+          v-if="cartStore.hasSoldOutItems"
+          role="alert"
+          class="text-xs font-semibold text-[var(--color-berry-ink)] text-pretty"
+        >
+          Remove sold-out dishes above before proceeding to payment.
+        </p>
+        <p v-else class="text-xs text-[var(--color-muted)] text-pretty">
           Pay first, dine after — order goes to the kitchen once paid.
         </p>
       </div>
@@ -201,7 +233,7 @@
         variant="primary"
         size="lg"
         trailing-icon="chevron-right"
-        :disabled="cartStore.items.length === 0 || !cartStore.selectedTableId || ordersStore.isSubmitting"
+        :disabled="cartStore.items.length === 0 || !cartStore.selectedTableId || cartStore.hasSoldOutItems || ordersStore.isSubmitting"
         :loading="ordersStore.isSubmitting"
         custom-class="w-full"
         @click="$emit('place-order')"
@@ -209,9 +241,11 @@
         {{
           ordersStore.isSubmitting
             ? 'Opening payment...'
-            : cartStore.isAddonMode
-              ? 'Pay for Extra Items'
-              : 'Proceed to Payment'
+            : cartStore.isEditingUnpaid
+              ? 'Save & Return to Payment'
+              : cartStore.isAddonMode
+                ? 'Pay for Extra Items'
+                : 'Proceed to Payment'
         }}
       </BaseButton>
     </div>
@@ -220,6 +254,7 @@
 
 <script setup lang="ts">
 import { reactive, computed } from 'vue'
+import type { OrderItem } from '@/types'
 import { useCartStore } from '@/stores/cart'
 import { useOrdersStore } from '@/stores/orders'
 import { formatCurrency } from '@/utils/format'
@@ -242,11 +277,15 @@ const props = withDefaults(
 
 defineEmits<{
   (e: 'place-order'): void
+  (e: 'cancel-edit'): void
 }>()
 
 const cartStore = useCartStore()
 const ordersStore = useOrdersStore()
-const openNotes = reactive<Record<number, boolean>>({})
+const openNotes = reactive<Record<string, boolean>>({})
+
+const itemKey = (item: OrderItem, index: number) =>
+  item.client_key || `${item.menu_item_id}-${index}`
 
 const friendlyTableName = computed(() => {
   const num = Number((props.tableNumber || '').replace(/\D/g, ''))

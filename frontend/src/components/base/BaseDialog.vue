@@ -5,6 +5,7 @@
   >
     <Teleport to="body">
       <div
+        ref="dialogWrapRef"
         class="fixed inset-0 z-50 flex items-center justify-center p-4 safe-pb transition-ui"
         :class="
           modelValue
@@ -72,9 +73,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { Dialog } from '@vuetify/v0'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 const props = withDefaults(
   defineProps<{
@@ -93,6 +97,10 @@ const emit = defineEmits<{
   (e: 'update:modelValue', val: boolean): void
 }>()
 
+const dialogWrapRef = ref<HTMLElement | null>(null)
+let previouslyFocused: HTMLElement | null = null
+let lockedBodyScroll = false
+
 const maxWidthClass = computed(() => {
   if (props.maxWidth === 'sm') return 'max-w-sm'
   if (props.maxWidth === 'lg') return 'max-w-2xl'
@@ -105,12 +113,59 @@ const handleOpenChange = (val: boolean | undefined) => {
 
 const close = () => emit('update:modelValue', false)
 
+const unlockScroll = () => {
+  if (lockedBodyScroll && typeof document !== 'undefined') {
+    document.body.style.overflow = ''
+    lockedBodyScroll = false
+  }
+}
+
+watch(
+  () => props.modelValue,
+  async (open) => {
+    if (typeof document === 'undefined') return
+    if (open) {
+      previouslyFocused = document.activeElement as HTMLElement | null
+      document.body.style.overflow = 'hidden'
+      lockedBodyScroll = true
+      await nextTick()
+      const focusables = dialogWrapRef.value?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      focusables?.[0]?.focus()
+    } else {
+      unlockScroll()
+      previouslyFocused?.focus?.()
+      previouslyFocused = null
+    }
+  },
+  { immediate: true },
+)
+
 const onKeyDown = (e: KeyboardEvent) => {
-  if (e.key === 'Escape' && props.modelValue) {
+  if (!props.modelValue) return
+  if (e.key === 'Escape') {
     close()
+    return
+  }
+  if (e.key === 'Tab' && dialogWrapRef.value) {
+    const focusables = Array.from(
+      dialogWrapRef.value.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+    ).filter((el) => el.offsetParent !== null)
+    if (focusables.length === 0) return
+    const first = focusables[0]
+    const last = focusables[focusables.length - 1]
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault()
+      last.focus()
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault()
+      first.focus()
+    }
   }
 }
 
 onMounted(() => window.addEventListener('keydown', onKeyDown))
-onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeyDown)
+  unlockScroll()
+})
 </script>

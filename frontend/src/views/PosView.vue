@@ -79,6 +79,7 @@
           variant="search"
           icon="search"
           filter-only
+          clear-on-select
           placeholder="Find a dish, dessert, or drink..."
           aria-label="Search menu items"
           empty-text="No matching dishes found."
@@ -213,6 +214,7 @@
         :table-number="selectedTable?.table_number"
         :service-charge="selectedTableActiveOrder?.service_charge"
         @place-order="handlePlaceOrder"
+        @cancel-edit="handleCancelEdit"
       />
     </aside>
 
@@ -264,6 +266,7 @@
         :table-number="selectedTable?.table_number"
         :service-charge="selectedTableActiveOrder?.service_charge"
         @place-order="handlePlaceOrder"
+        @cancel-edit="handleCancelEdit"
       />
     </BaseSheet>
 
@@ -288,6 +291,7 @@ import { useMenuStore } from '@/stores/menu'
 import { useTablesStore } from '@/stores/tables'
 import { useCartStore } from '@/stores/cart'
 import { useOrdersStore } from '@/stores/orders'
+import { useToastStore } from '@/stores/toast'
 import type { MenuItem } from '@/types'
 import { formatCurrency, getManilaGreeting } from '@/utils/format'
 import { executeViewTransition } from '@/utils/transition'
@@ -311,6 +315,7 @@ const menuStore = useMenuStore()
 const tablesStore = useTablesStore()
 const cartStore = useCartStore()
 const ordersStore = useOrdersStore()
+const toastStore = useToastStore()
 
 const searchQuery = ref<string | number | null>('')
 const isMobileSheetOpen = ref(false)
@@ -320,6 +325,12 @@ const flyingDots = ref<FlyingDot[]>([])
 let dotSeq = 0
 
 onMounted(async () => {
+  // Enforce Step 1 (Choose a Table) before taking an order — never silently default to Table 1
+  if (!cartStore.selectedTableId) {
+    toastStore.info('Choose a table first', 'Tap an available table to start taking an order.')
+    router.replace('/tables')
+    return
+  }
   await Promise.all([menuStore.fetchMenu(), tablesStore.fetchTables()])
   ordersStore.startPolling(3500)
 })
@@ -395,10 +406,29 @@ const backToTables = () => {
 
 const onSelectTable = (opt: ComboboxOption) => {
   const tableId = Number(opt.value)
+  if (tableId === cartStore.selectedTableId) return
+
+  const hadItems = cartStore.items.length > 0
   const existing = ordersStore.getOrderByTableId(tableId)
+
+  // Prevent dishes drafted for one table from accidentally leaking onto another table
+  if (hadItems) {
+    cartStore.clearCart()
+    toastStore.info('Order tray reset', 'Started a fresh tray for the selected table.')
+  }
+
+  // If the chosen table already has an unpaid bill, take the waiter straight to payment
+  if (existing && existing.payment_status === 'unpaid') {
+    cartStore.setTable(tableId, existing.id, existing.order_ref)
+    executeViewTransition(() => {
+      router.push(`/payment/${existing.id}`)
+    })
+    return
+  }
+
   executeViewTransition(() => {
     if (existing) {
-      cartStore.setTable(tableId, existing.id, existing.order_ref)
+      cartStore.loadForAddon(tableId, existing.id, existing.order_ref)
     } else {
       cartStore.setTable(tableId, null, null)
     }
@@ -462,26 +492,56 @@ const handleQuickAdd = (payload: { item: MenuItem; originX: number; originY: num
   triggerOriginFly(payload.originX, payload.originY)
 }
 
-// Pay-First, Dine-After: Finished picking dishes -> create unpaid ticket & go straight to Payment!
+const handleCancelEdit = () => {
+  const editId = cartStore.editingOrderId
+  cartStore.clearCart()
+  isMobileSheetOpen.value = false
+  executeViewTransition(() => {
+    router.push(editId ? `/payment/${editId}` : '/payment')
+  })
+}
+
+// Pay-First, Dine-After: handles (1) editing an unpaid order, (2) Extra Food pay-first add-on, (3) new table order
 const handlePlaceOrder = async () => {
-  if (!cartStore.selectedTableId || cartStore.items.length === 0) return
+  if (!cartStore.selectedTableId || cartStore.items.length === 0 || cartStore.hasSoldOutItems) return
   const table = selectedTable.value
   if (!table) return
+  const currentUser = authStore.user
+  if (!currentUser) {
+    toastStore.error('Session expired', 'Please sign in again before placing an order.')
+    router.push('/login')
+    return
+  }
 
   try {
-    const created = await ordersStore.createOrderForPayment(
-      table.id,
-      table.table_number,
-      cartStore.items,
-      authStore.user?.name || 'Waiter',
-      authStore.user?.id || 2,
-    )
-    cartStore.clearCart()
-    cartStore.setTable(table.id, created.id, created.order_ref)
-    isMobileSheetOpen.value = false
+    let targetOrderId: number
 
+    if (cartStore.isEditingUnpaid && cartStore.editingOrderId) {
+      const updated = await ordersStore.updateUnpaidOrderItems(
+        cartStore.editingOrderId,
+        cartStore.items,
+      )
+      targetOrderId = updated.id
+      cartStore.clearCart()
+      cartStore.setTable(table.id, updated.id, updated.order_ref)
+    } else {
+      const isAddon = cartStore.isAddonMode
+      const created = await ordersStore.createOrderForPayment(
+        table.id,
+        table.table_number,
+        cartStore.items,
+        currentUser.name,
+        currentUser.id,
+        isAddon,
+      )
+      targetOrderId = created.id
+      cartStore.clearCart()
+      cartStore.setTable(table.id, created.id, created.order_ref)
+    }
+
+    isMobileSheetOpen.value = false
     executeViewTransition(() => {
-      router.push(`/payment/${created.id}`)
+      router.push(`/payment/${targetOrderId}`)
     })
   } catch {
     // Error toast already shown by store

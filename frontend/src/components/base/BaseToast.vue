@@ -1,6 +1,7 @@
 <template>
   <div
-    class="fixed z-[1200] right-4 bottom-20 md:bottom-5 left-4 sm:left-auto sm:w-96 flex flex-col gap-2 pointer-events-none safe-pb-bar no-print"
+    class="fixed z-[1200] right-4 left-4 sm:left-auto sm:w-96 flex flex-col gap-2 pointer-events-none safe-pb-bar no-print"
+    :class="isPosRoute ? 'bottom-[136px] lg:bottom-5' : 'bottom-20 md:bottom-5'"
     aria-label="Notifications"
   >
     <TransitionGroup name="servio-toast">
@@ -58,12 +59,16 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { Alert } from '@vuetify/v0'
 import { useToastStore } from '@/stores/toast'
 import type { ToastItem } from '@/stores/toast'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 
+const route = useRoute()
 const toastStore = useToastStore()
+const isPosRoute = computed(() => route.path.startsWith('/pos'))
 
 const borderTone = (type: ToastItem['type']) => {
   if (type === 'error') return 'border-[var(--color-berry-ink)]/45'

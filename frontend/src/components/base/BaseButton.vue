@@ -10,6 +10,7 @@
     <button
       v-bind="attrs"
       :type="type"
+      :form="form"
       :class="[
         'inline-flex items-center justify-center gap-2 font-semibold select-none transition-ui',
         shapeClass,
@@ -73,6 +74,7 @@ import BaseIcon from '@/components/icons/BaseIcon.vue'
 const props = withDefaults(
   defineProps<{
     type?: 'button' | 'submit' | 'reset'
+    form?: string
     variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'dark' | 'kds-primary' | 'kds-ready'
     size?: 'sm' | 'md' | 'lg'
     pill?: boolean
@@ -85,6 +87,7 @@ const props = withDefaults(
   }>(),
   {
     type: 'button',
+    form: undefined,
     variant: 'primary',
     size: 'md',
     pill: true,

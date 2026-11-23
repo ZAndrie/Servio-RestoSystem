@@ -5,6 +5,7 @@
   >
     <Teleport to="body">
       <div
+        ref="sheetWrapRef"
         class="fixed inset-0 z-50 transition-ui"
         :class="[
           side === 'bottom' ? 'flex items-end justify-center' : 'flex items-stretch justify-end',
@@ -19,7 +20,7 @@
           @click="close"
         />
 
-        <!-- Sheet Container wrapping Vuetify0 Dialog.Content (Term 10 & 18 origin-aware interruptible) -->
+        <!-- Sheet Container wrapping Vuetify0 Dialog.Content -->
         <Dialog.Content
           as="div"
           :scrim="false"
@@ -71,7 +72,7 @@
             <slot />
           </div>
 
-          <!-- Optional Sticky Footer with Term 13 Safe Area Bottom Padding -->
+          <!-- Optional Sticky Footer with Safe Area Bottom Padding -->
           <div
             v-if="$slots.footer"
             class="px-5 pt-4 safe-pb bg-[var(--color-bg)] border-t border-[var(--color-line)] shrink-0"
@@ -85,9 +86,12 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { Dialog } from '@vuetify/v0'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 const props = withDefaults(
   defineProps<{
@@ -106,18 +110,69 @@ const emit = defineEmits<{
   (e: 'update:modelValue', val: boolean): void
 }>()
 
+const sheetWrapRef = ref<HTMLElement | null>(null)
+let previouslyFocused: HTMLElement | null = null
+let lockedBodyScroll = false
+
 const handleOpenChange = (val: boolean | undefined) => {
   emit('update:modelValue', Boolean(val))
 }
 
 const close = () => emit('update:modelValue', false)
 
+const unlockScroll = () => {
+  if (lockedBodyScroll && typeof document !== 'undefined') {
+    document.body.style.overflow = ''
+    lockedBodyScroll = false
+  }
+}
+
+watch(
+  () => props.modelValue,
+  async (open) => {
+    if (typeof document === 'undefined') return
+    if (open) {
+      previouslyFocused = document.activeElement as HTMLElement | null
+      document.body.style.overflow = 'hidden'
+      lockedBodyScroll = true
+      await nextTick()
+      const focusables = sheetWrapRef.value?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      focusables?.[0]?.focus()
+    } else {
+      unlockScroll()
+      previouslyFocused?.focus?.()
+      previouslyFocused = null
+    }
+  },
+  { immediate: true },
+)
+
 const onKeyDown = (e: KeyboardEvent) => {
-  if (e.key === 'Escape' && props.modelValue) {
+  if (!props.modelValue) return
+  if (e.key === 'Escape') {
     close()
+    return
+  }
+  if (e.key === 'Tab' && sheetWrapRef.value) {
+    const focusables = Array.from(
+      sheetWrapRef.value.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+    ).filter((el) => el.offsetParent !== null)
+    if (focusables.length === 0) return
+    const first = focusables[0]
+    const last = focusables[focusables.length - 1]
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault()
+      last.focus()
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault()
+      first.focus()
+    }
   }
 }
 
 onMounted(() => window.addEventListener('keydown', onKeyDown))
-onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeyDown)
+  unlockScroll()
+})
 </script>

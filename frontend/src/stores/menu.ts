@@ -62,7 +62,7 @@ export const useMenuStore = defineStore('menu', {
       item.is_available = !previousState
 
       try {
-        await menuService.toggleAvailability(itemId, simulateFailure)
+        await menuService.toggleAvailability(itemId, item.is_available, simulateFailure)
         toastStore.success(
           item.name,
           item.is_available ? 'Back on the menu for waiters.' : 'Marked sold out across POS screens.',
