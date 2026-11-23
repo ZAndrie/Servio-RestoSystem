@@ -3,6 +3,7 @@ import type { RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 import LoginView from '@/views/LoginView.vue'
+import HomeView from '@/views/HomeView.vue'
 import TablesView from '@/views/TablesView.vue'
 import PosView from '@/views/PosView.vue'
 import ActiveOrdersView from '@/views/ActiveOrdersView.vue'
@@ -75,14 +76,9 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/',
-    redirect: () => {
-      const authStore = useAuthStore()
-      if (!authStore.isAuthenticated) return '/login'
-      if (authStore.isAdmin) return '/admin/dashboard'
-      if (authStore.isKitchen) return '/kitchen'
-      // Waiters land directly on Visual Table Assignment (Step 1) -> then Take Order (Step 2)
-      return '/tables'
-    },
+    name: 'home',
+    component: HomeView,
+    meta: { fullScreen: true },
   },
   {
     path: '/:pathMatch(.*)*',

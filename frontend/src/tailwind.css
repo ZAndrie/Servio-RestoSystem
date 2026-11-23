@@ -86,6 +86,8 @@
    ========================================================================== */
 
 html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
   font-kerning: normal;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;

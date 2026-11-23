@@ -14,6 +14,18 @@
       class="relative w-full max-w-[420px] bg-[var(--color-surface)] border border-[var(--color-line)] rounded-[var(--radius-card)] p-6 sm:p-8 space-y-6"
       aria-labelledby="login-heading"
     >
+      <!-- Back to Homepage Link -->
+      <div class="flex items-center justify-between pb-1">
+        <router-link
+          to="/"
+          class="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-ui"
+        >
+          <BaseIcon name="arrow-left" :size="14" />
+          <span>Back to Home</span>
+        </router-link>
+        <span class="text-[11px] text-[var(--color-muted)] font-medium">Servio POS</span>
+      </div>
+
       <!-- Brand Header (Term 1 manually kerned serif wordmark) -->
       <header class="text-center space-y-2.5">
         <img
@@ -162,6 +174,7 @@ import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import BaseButton from '@/components/base/BaseButton.vue'
+import BaseIcon from '@/components/icons/BaseIcon.vue'
 
 const router = useRouter()
 const route = useRoute()
