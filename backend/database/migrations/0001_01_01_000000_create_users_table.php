@@ -14,6 +14,8 @@ return new class extends Migration
             $table->string('username', 50)->unique();
             $table->string('password', 255);
             $table->enum('role', ['admin', 'waiter', 'kitchen']);
+            $table->boolean('is_active')->default(true);
+            $table->boolean('must_change_password')->default(false);
             $table->timestamps();
         });
     }

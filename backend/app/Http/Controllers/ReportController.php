@@ -12,9 +12,10 @@ class ReportController extends Controller
 {
     public function daily(DailyReportRequest $request): JsonResponse
     {
-        $date = $request->validated('date') ?? now()->toDateString();
-        $start = Carbon::parse($date)->startOfDay();
-        $end = Carbon::parse($date)->endOfDay();
+        $timezone = (string) config('app.timezone', 'Asia/Manila');
+        $date = $request->validated('date') ?? now($timezone)->toDateString();
+        $start = Carbon::parse($date, $timezone)->startOfDay();
+        $end = Carbon::parse($date, $timezone)->endOfDay();
 
         $paidOrders = Order::query()
             ->with([
@@ -22,10 +23,16 @@ class ReportController extends Controller
                 'user:id,name,username',
                 'items.menuItem',
             ])
-            ->where('status', Order::STATUS_PAID)
+            ->where('payment_status', Order::PAYMENT_PAID)
+            ->where('status', '!=', Order::STATUS_CANCELLED)
             ->whereBetween('paid_at', [$start, $end])
             ->orderBy('paid_at', 'asc')
             ->get();
+
+        $cancelledCount = Order::query()
+            ->where('status', Order::STATUS_CANCELLED)
+            ->whereBetween('updated_at', [$start, $end])
+            ->count();
 
         $totalSalesCents = 0;
         $byPaymentMethod = [];
@@ -49,14 +56,17 @@ class ReportController extends Controller
 
             foreach ($order->items as $item) {
                 $menuItemId = $item->menu_item_id;
+                $unitCents = (int) round(((float) $item->unit_price) * 100);
                 if (! isset($itemsSold[$menuItemId])) {
                     $itemsSold[$menuItemId] = [
                         'menu_item_id' => $menuItemId,
                         'name' => $item->menuItem?->name ?? 'Unknown Item',
                         'quantity_sold' => 0,
+                        'revenue_cents' => 0,
                     ];
                 }
                 $itemsSold[$menuItemId]['quantity_sold'] += $item->quantity;
+                $itemsSold[$menuItemId]['revenue_cents'] += $unitCents * $item->quantity;
             }
         }
 
@@ -71,46 +81,62 @@ class ReportController extends Controller
             ];
         }
 
-        usort($itemsSold, fn (array $a, array $b): int => $b['quantity_sold'] <=> $a['quantity_sold']);
+        $formattedItemsSold = array_map(
+            fn (array $row): array => [
+                'menu_item_id' => $row['menu_item_id'],
+                'name' => $row['name'],
+                'quantity_sold' => $row['quantity_sold'],
+                'revenue' => number_format($row['revenue_cents'] / 100, 2, '.', ''),
+            ],
+            array_values($itemsSold)
+        );
+
+        usort($formattedItemsSold, fn (array $a, array $b): int => $b['quantity_sold'] <=> $a['quantity_sold']);
 
         return response()->json([
             'date' => $date,
+            'timezone' => $timezone,
             'summary' => [
                 'total_sales' => number_format($totalSalesCents / 100, 2, '.', ''),
                 'order_count' => $orderCount,
                 'average_order_value' => number_format($averageOrderCents / 100, 2, '.', ''),
+                'cancelled_orders_count' => $cancelledCount,
                 'by_payment_method' => $formattedPaymentMethods,
             ],
-            'items_sold' => array_values($itemsSold),
+            'items_sold' => $formattedItemsSold,
             'orders' => $paidOrders,
         ]);
     }
 
     public function dashboard(): JsonResponse
     {
-        $today = now()->toDateString();
-        $start = now()->startOfDay();
-        $end = now()->endOfDay();
+        $timezone = (string) config('app.timezone', 'Asia/Manila');
+        $today = now($timezone)->toDateString();
+        $start = now($timezone)->startOfDay();
+        $end = now($timezone)->endOfDay();
 
         $paidTodayQuery = Order::query()
-            ->where('status', Order::STATUS_PAID)
+            ->where('payment_status', Order::PAYMENT_PAID)
+            ->where('status', '!=', Order::STATUS_CANCELLED)
             ->whereBetween('paid_at', [$start, $end]);
 
         $paidOrdersToday = (clone $paidTodayQuery)->count();
         $todaySales = (float) ((clone $paidTodayQuery)->sum('total') ?? 0);
 
+        $unpaidOrdersCount = Order::query()
+            ->where('payment_status', Order::PAYMENT_UNPAID)
+            ->where('status', '!=', Order::STATUS_CANCELLED)
+            ->count();
+
         $activeCounts = Order::query()
             ->selectRaw('status, COUNT(*) as count')
-            ->whereIn('status', [
-                Order::STATUS_PENDING,
-                Order::STATUS_PREPARING,
-                Order::STATUS_READY,
-                Order::STATUS_SERVED,
-            ])
+            ->where('payment_status', Order::PAYMENT_PAID)
+            ->whereIn('status', Order::ACTIVE_STATUSES)
             ->groupBy('status')
             ->pluck('count', 'status');
 
         $ordersByStatus = [
+            'unpaid' => $unpaidOrdersCount,
             Order::STATUS_PENDING => (int) ($activeCounts[Order::STATUS_PENDING] ?? 0),
             Order::STATUS_PREPARING => (int) ($activeCounts[Order::STATUS_PREPARING] ?? 0),
             Order::STATUS_READY => (int) ($activeCounts[Order::STATUS_READY] ?? 0),
@@ -118,7 +144,8 @@ class ReportController extends Controller
             'paid_today' => $paidOrdersToday,
         ];
 
-        $activeOrdersCount = $ordersByStatus[Order::STATUS_PENDING]
+        $activeOrdersCount = $unpaidOrdersCount
+            + $ordersByStatus[Order::STATUS_PENDING]
             + $ordersByStatus[Order::STATUS_PREPARING]
             + $ordersByStatus[Order::STATUS_READY]
             + $ordersByStatus[Order::STATUS_SERVED];
@@ -142,8 +169,10 @@ class ReportController extends Controller
 
         return response()->json([
             'date' => $today,
+            'timezone' => $timezone,
             'today_sales' => number_format($todaySales, 2, '.', ''),
             'paid_orders_today' => $paidOrdersToday,
+            'unpaid_orders_count' => $unpaidOrdersCount,
             'active_orders_count' => $activeOrdersCount,
             'orders_by_status' => $ordersByStatus,
             'tables' => [

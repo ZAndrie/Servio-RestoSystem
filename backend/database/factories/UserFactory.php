@@ -23,6 +23,8 @@ class UserFactory extends Factory
             'username' => fake()->unique()->userName(),
             'password' => static::$password ??= Hash::make('password'),
             'role' => User::ROLE_WAITER,
+            'is_active' => true,
+            'must_change_password' => false,
         ];
     }
 
@@ -39,5 +41,15 @@ class UserFactory extends Factory
     public function kitchen(): static
     {
         return $this->state(fn () => ['role' => User::ROLE_KITCHEN]);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn () => ['is_active' => false]);
+    }
+
+    public function mustChangePassword(): static
+    {
+        return $this->state(fn () => ['must_change_password' => true]);
     }
 }

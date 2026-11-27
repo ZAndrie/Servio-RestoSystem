@@ -11,22 +11,44 @@ class UserSeeder extends Seeder
     {
         $users = [
             [
-                'name' => 'System Admin',
+                'name' => 'Maria Santos',
                 'username' => 'admin',
                 'password' => 'admin123',
                 'role' => User::ROLE_ADMIN,
+                'is_active' => true,
+                'must_change_password' => false,
             ],
             [
-                'name' => 'Juan Dela Cruz',
+                'name' => 'Ana Reyes',
                 'username' => 'waiter',
                 'password' => 'waiter123',
                 'role' => User::ROLE_WAITER,
+                'is_active' => true,
+                'must_change_password' => false,
             ],
             [
-                'name' => 'Chef Maria',
+                'name' => 'Ramon Cruz',
                 'username' => 'kitchen',
                 'password' => 'kitchen123',
                 'role' => User::ROLE_KITCHEN,
+                'is_active' => true,
+                'must_change_password' => false,
+            ],
+            [
+                'name' => 'Paolo Mendoza',
+                'username' => 'waiter_paolo',
+                'password' => 'waiter123',
+                'role' => User::ROLE_WAITER,
+                'is_active' => true,
+                'must_change_password' => false,
+            ],
+            [
+                'name' => 'Liza Bautista',
+                'username' => 'kitchen_liza',
+                'password' => 'kitchen123',
+                'role' => User::ROLE_KITCHEN,
+                'is_active' => false,
+                'must_change_password' => false,
             ],
         ];
 

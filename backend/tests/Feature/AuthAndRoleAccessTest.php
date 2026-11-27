@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\Table;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -15,10 +16,10 @@ class AuthAndRoleAccessTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_user_can_login_fetch_profile_and_logout(): void
+    public function test_user_can_login_fetch_profile_change_password_and_logout(): void
     {
-        User::factory()->admin()->create([
-            'name' => 'Admin User',
+        $user = User::factory()->admin()->mustChangePassword()->create([
+            'name' => 'Maria Santos',
             'username' => 'admin',
             'password' => 'secret123',
         ]);
@@ -29,9 +30,14 @@ class AuthAndRoleAccessTest extends TestCase
         ]);
 
         $loginResponse->assertOk()
-            ->assertJsonStructure(['token', 'token_type', 'user' => ['id', 'name', 'username', 'role']])
+            ->assertJsonStructure([
+                'token',
+                'token_type',
+                'user' => ['id', 'name', 'username', 'role', 'is_active', 'must_change_password'],
+            ])
             ->assertJsonPath('user.username', 'admin')
-            ->assertJsonPath('user.role', 'admin');
+            ->assertJsonPath('user.is_active', true)
+            ->assertJsonPath('user.must_change_password', true);
 
         $token = $loginResponse->json('token');
 
@@ -40,16 +46,38 @@ class AuthAndRoleAccessTest extends TestCase
             ->assertOk()
             ->assertJsonPath('user.username', 'admin');
 
+        // First-login mandatory password change clears must_change_password
+        $this->withToken($token)
+            ->postJson('/api/change-password', ['password' => 'newpass456'])
+            ->assertOk()
+            ->assertJsonPath('user.must_change_password', false);
+
+        $this->assertTrue(Hash::check('newpass456', $user->fresh()->password));
+        $this->assertFalse($user->fresh()->must_change_password);
+
         $this->withToken($token)
             ->postJson('/api/logout')
             ->assertOk();
 
-        // Reset auth guard cache to verify token is revoked in DB.
         $this->app['auth']->forgetGuards();
 
         $this->withToken($token)
             ->getJson('/api/me')
             ->assertUnauthorized();
+    }
+
+    public function test_inactive_user_login_is_rejected_with_403(): void
+    {
+        User::factory()->kitchen()->inactive()->create([
+            'username' => 'kitchen_liza',
+            'password' => 'kitchen123',
+        ]);
+
+        $this->postJson('/api/login', [
+            'username' => 'kitchen_liza',
+            'password' => 'kitchen123',
+        ])->assertForbidden()
+            ->assertJsonStructure(['message']);
     }
 
     public function test_invalid_login_credentials_are_rejected(): void
@@ -74,27 +102,34 @@ class AuthAndRoleAccessTest extends TestCase
         $this->getJson('/api/orders')->assertUnauthorized();
         $this->getJson('/api/dashboard')->assertUnauthorized();
         $this->getJson('/api/reports/daily')->assertUnauthorized();
+        $this->postJson('/api/change-password', ['password' => 'newpass123'])->assertUnauthorized();
     }
 
-    public function test_role_access_matrix_blocks_unauthorized_roles(): void
+    public function test_role_access_matrix_enforces_frontend_rbac(): void
     {
         $admin = User::factory()->admin()->create();
         $waiter = User::factory()->waiter()->create();
         $kitchen = User::factory()->kitchen()->create();
 
-        $category = Category::query()->create(['name' => 'Mains']);
+        $category = Category::query()->create(['name' => 'Dishes', 'slug' => 'dishes']);
         $menuItem = MenuItem::query()->create([
             'category_id' => $category->id,
             'name' => 'Adobo',
-            'price' => 150.00,
+            'price' => 240.00,
             'is_available' => true,
         ]);
-        $table = Table::query()->create(['table_number' => 'T1', 'status' => Table::STATUS_AVAILABLE]);
+        $table = Table::query()->create([
+            'table_number' => 'T-01',
+            'capacity' => 4,
+            'status' => Table::STATUS_AVAILABLE,
+        ]);
         $order = Order::query()->create([
+            'order_ref' => 'ORD-1001',
             'table_id' => $table->id,
             'user_id' => $waiter->id,
-            'status' => Order::STATUS_SERVED,
-            'total' => 150.00,
+            'status' => Order::STATUS_PENDING,
+            'payment_status' => Order::PAYMENT_UNPAID,
+            'total' => 240.00,
         ]);
 
         // Waiter cannot access admin-only endpoints
@@ -108,16 +143,17 @@ class AuthAndRoleAccessTest extends TestCase
         ])->assertForbidden();
         $this->patchJson("/api/menu-items/{$menuItem->id}/availability", ['is_available' => false])->assertForbidden();
         $this->getJson('/api/reports/daily')->assertForbidden();
-        // Waiter CAN read categories, menu items, tables, dashboard
+        // Waiter CAN access tables, menu, orders, dashboard
         $this->getJson('/api/categories')->assertOk();
         $this->getJson('/api/menu-items')->assertOk();
         $this->getJson('/api/tables')->assertOk();
         $this->getJson('/api/dashboard')->assertOk();
 
-        // Kitchen cannot access admin, waiter order creation, tables, dashboard, reports, or payment
+        // Kitchen cannot access admin, tables, POS order creation, payment, cancel, dashboard, or reports
         Sanctum::actingAs($kitchen);
         $this->getJson('/api/users')->assertForbidden();
         $this->getJson('/api/tables')->assertForbidden();
+        $this->patchJson("/api/tables/{$table->id}/release")->assertForbidden();
         $this->getJson('/api/dashboard')->assertForbidden();
         $this->getJson('/api/reports/daily')->assertForbidden();
         $this->postJson('/api/orders', [
@@ -126,25 +162,18 @@ class AuthAndRoleAccessTest extends TestCase
         ])->assertForbidden();
         $this->postJson("/api/orders/{$order->id}/pay", [
             'payment_method' => 'cash',
-            'amount_paid' => 200,
+            'amount_paid' => 240,
+        ])->assertForbidden();
+        $this->postJson("/api/orders/{$order->id}/cancel", [
+            'reason' => 'Not allowed for kitchen',
         ])->assertForbidden();
         // Kitchen CAN read orders, categories, menu items
         $this->getJson('/api/orders')->assertOk();
         $this->getJson('/api/categories')->assertOk();
         $this->getJson('/api/menu-items')->assertOk();
 
-        // Admin cannot create orders, update kitchen/waiter order status, or process payment
+        // Admin has full operational access across admin, floor, POS, and KDS
         Sanctum::actingAs($admin);
-        $this->postJson('/api/orders', [
-            'table_id' => $table->id,
-            'items' => [['menu_item_id' => $menuItem->id, 'quantity' => 1]],
-        ])->assertForbidden();
-        $this->patchJson("/api/orders/{$order->id}/status", ['status' => 'preparing'])->assertForbidden();
-        $this->postJson("/api/orders/{$order->id}/pay", [
-            'payment_method' => 'cash',
-            'amount_paid' => 200,
-        ])->assertForbidden();
-        // Admin CAN access users, reports, dashboard, tables, orders
         $this->getJson('/api/users')->assertOk();
         $this->getJson('/api/reports/daily')->assertOk();
         $this->getJson('/api/dashboard')->assertOk();

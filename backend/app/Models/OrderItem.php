@@ -18,8 +18,18 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'menu_item_id',
+        'unit_price',
         'quantity',
         'notes',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    protected $appends = [
+        'name',
+        'image',
+        'artwork',
     ];
 
     /**
@@ -28,8 +38,36 @@ class OrderItem extends Model
     protected function casts(): array
     {
         return [
+            'unit_price' => 'decimal:2',
             'quantity' => 'integer',
         ];
+    }
+
+    public function getNameAttribute(): string
+    {
+        if ($this->relationLoaded('menuItem')) {
+            return $this->menuItem?->name ?? 'Dish';
+        }
+
+        return (string) ($this->menuItem()->value('name') ?? 'Dish');
+    }
+
+    public function getImageAttribute(): ?string
+    {
+        if ($this->relationLoaded('menuItem')) {
+            return $this->menuItem?->image;
+        }
+
+        return null;
+    }
+
+    public function getArtworkAttribute(): ?string
+    {
+        if ($this->relationLoaded('menuItem')) {
+            return $this->menuItem?->artwork;
+        }
+
+        return null;
     }
 
     public function order(): BelongsTo

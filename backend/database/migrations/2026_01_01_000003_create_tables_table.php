@@ -11,7 +11,10 @@ return new class extends Migration
         Schema::create('tables', function (Blueprint $table) {
             $table->id();
             $table->string('table_number', 10)->unique();
+            $table->unsignedTinyInteger('capacity')->default(4);
             $table->enum('status', ['available', 'occupied'])->default('available');
+            $table->unsignedBigInteger('active_order_id')->nullable();
+            $table->string('active_order_ref', 20)->nullable();
         });
     }
 

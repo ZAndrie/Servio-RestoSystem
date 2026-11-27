@@ -19,27 +19,29 @@ class ReportsAndMigrationsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_daily_report_and_dashboard_return_accurate_aggregates(): void
+    public function test_daily_report_and_dashboard_count_paid_non_cancelled_orders_accurately(): void
     {
         $admin = User::factory()->admin()->create();
         $waiter = User::factory()->waiter()->create();
 
-        $category = Category::query()->create(['name' => 'Mains']);
+        $category = Category::query()->create(['name' => 'Dishes', 'slug' => 'dishes']);
         $adobo = MenuItem::query()->create([
             'category_id' => $category->id,
-            'name' => 'Adobo',
-            'price' => 150.00,
+            'name' => 'Chicken Adobo',
+            'price' => 240.00,
             'is_available' => true,
         ]);
-        $t1 = Table::query()->create(['table_number' => 'T1', 'status' => Table::STATUS_AVAILABLE]);
-        $t2 = Table::query()->create(['table_number' => 'T2', 'status' => Table::STATUS_OCCUPIED]);
+        $t1 = Table::query()->create(['table_number' => 'T-01', 'capacity' => 2, 'status' => Table::STATUS_AVAILABLE]);
+        $t2 = Table::query()->create(['table_number' => 'T-02', 'capacity' => 4, 'status' => Table::STATUS_OCCUPIED]);
 
-        // Paid today (cash)
+        // Paid & completed today (cash)
         $paidCash = Order::query()->create([
+            'order_ref' => 'ORD-1001',
             'table_id' => $t1->id,
             'user_id' => $waiter->id,
             'status' => Order::STATUS_PAID,
-            'total' => 300.00,
+            'payment_status' => Order::PAYMENT_PAID,
+            'total' => 480.00,
             'payment_method' => Order::PAYMENT_CASH,
             'amount_paid' => 500.00,
             'paid_at' => now(),
@@ -47,85 +49,115 @@ class ReportsAndMigrationsTest extends TestCase
         OrderItem::query()->create([
             'order_id' => $paidCash->id,
             'menu_item_id' => $adobo->id,
+            'unit_price' => 240.00,
             'quantity' => 2,
         ]);
 
-        // Paid today (gcash)
-        $paidGcash = Order::query()->create([
-            'table_id' => $t1->id,
+        // Paid today & still cooking in KDS (gcash) — still counts in Pay-First today's revenue!
+        $paidCooking = Order::query()->create([
+            'order_ref' => 'ORD-1002',
+            'table_id' => $t2->id,
             'user_id' => $waiter->id,
-            'status' => Order::STATUS_PAID,
-            'total' => 150.00,
+            'status' => Order::STATUS_PREPARING,
+            'payment_status' => Order::PAYMENT_PAID,
+            'total' => 240.00,
             'payment_method' => Order::PAYMENT_GCASH,
-            'amount_paid' => 150.00,
+            'amount_paid' => 240.00,
             'paid_at' => now(),
         ]);
         OrderItem::query()->create([
-            'order_id' => $paidGcash->id,
+            'order_id' => $paidCooking->id,
             'menu_item_id' => $adobo->id,
+            'unit_price' => 240.00,
             'quantity' => 1,
         ]);
 
-        // Paid yesterday (excluded from today's report)
+        // Cancelled order today — excluded from revenue, counted in cancelled_orders_count
         Order::query()->create([
+            'order_ref' => 'ORD-1003',
+            'table_id' => $t1->id,
+            'user_id' => $waiter->id,
+            'status' => Order::STATUS_CANCELLED,
+            'payment_status' => Order::PAYMENT_PAID,
+            'total' => 500.00,
+            'payment_method' => Order::PAYMENT_CASH,
+            'amount_paid' => 500.00,
+            'cancellation_reason' => 'Refunded',
+            'paid_at' => now(),
+        ]);
+
+        // Unpaid draft order today — excluded from revenue
+        Order::query()->create([
+            'order_ref' => 'ORD-1004',
+            'table_id' => $t2->id,
+            'user_id' => $waiter->id,
+            'status' => Order::STATUS_PENDING,
+            'payment_status' => Order::PAYMENT_UNPAID,
+            'total' => 240.00,
+        ]);
+
+        // Paid yesterday — excluded from today's report
+        Order::query()->create([
+            'order_ref' => 'ORD-1005',
             'table_id' => $t1->id,
             'user_id' => $waiter->id,
             'status' => Order::STATUS_PAID,
+            'payment_status' => Order::PAYMENT_PAID,
             'total' => 999.00,
             'payment_method' => Order::PAYMENT_CARD,
             'amount_paid' => 999.00,
             'paid_at' => now()->subDay(),
         ]);
 
-        // Active pending order on T2
-        Order::query()->create([
-            'table_id' => $t2->id,
-            'user_id' => $waiter->id,
-            'status' => Order::STATUS_PENDING,
-            'total' => 150.00,
-        ]);
-
         Sanctum::actingAs($admin);
 
-        // Daily sales report for today
-        $today = now()->toDateString();
+        $today = now(config('app.timezone', 'Asia/Manila'))->toDateString();
         $this->getJson("/api/reports/daily?date={$today}")
             ->assertOk()
             ->assertJsonPath('date', $today)
-            ->assertJsonPath('summary.total_sales', '450.00')
+            ->assertJsonPath('timezone', 'Asia/Manila')
+            ->assertJsonPath('summary.total_sales', '720.00')
             ->assertJsonPath('summary.order_count', 2)
-            ->assertJsonPath('summary.average_order_value', '225.00')
+            ->assertJsonPath('summary.average_order_value', '360.00')
+            ->assertJsonPath('summary.cancelled_orders_count', 1)
             ->assertJsonPath('summary.by_payment_method.cash.count', 1)
-            ->assertJsonPath('summary.by_payment_method.cash.total', '300.00')
+            ->assertJsonPath('summary.by_payment_method.cash.total', '480.00')
             ->assertJsonPath('summary.by_payment_method.gcash.count', 1)
-            ->assertJsonPath('summary.by_payment_method.gcash.total', '150.00')
-            ->assertJsonPath('summary.by_payment_method.card.count', 0)
-            ->assertJsonPath('items_sold.0.quantity_sold', 3);
+            ->assertJsonPath('summary.by_payment_method.gcash.total', '240.00')
+            ->assertJsonPath('items_sold.0.quantity_sold', 3)
+            ->assertJsonPath('items_sold.0.revenue', '720.00');
 
-        // Dashboard metrics
         $this->getJson('/api/dashboard')
             ->assertOk()
-            ->assertJsonPath('today_sales', '450.00')
+            ->assertJsonPath('today_sales', '720.00')
             ->assertJsonPath('paid_orders_today', 2)
-            ->assertJsonPath('active_orders_count', 1)
-            ->assertJsonPath('orders_by_status.pending', 1)
-            ->assertJsonPath('orders_by_status.paid_today', 2)
+            ->assertJsonPath('unpaid_orders_count', 1)
+            ->assertJsonPath('orders_by_status.preparing', 1)
+            ->assertJsonPath('orders_by_status.unpaid', 1)
             ->assertJsonPath('tables.total', 2)
             ->assertJsonPath('tables.available', 1)
             ->assertJsonPath('tables.occupied', 1);
     }
 
-    public function test_seeders_create_default_users_tables_and_menu_idempotently(): void
+    public function test_seeders_create_frontend_aligned_users_tables_and_21_menu_items_idempotently(): void
     {
         $this->seed(DatabaseSeeder::class);
         $this->seed(DatabaseSeeder::class);
 
-        $this->assertDatabaseHas('users', ['username' => 'admin', 'role' => 'admin']);
-        $this->assertDatabaseHas('users', ['username' => 'waiter', 'role' => 'waiter']);
-        $this->assertDatabaseHas('users', ['username' => 'kitchen', 'role' => 'kitchen']);
+        $this->assertSame(5, User::query()->count());
+        $this->assertDatabaseHas('users', ['username' => 'admin', 'role' => 'admin', 'is_active' => true]);
+        $this->assertDatabaseHas('users', ['username' => 'waiter', 'role' => 'waiter', 'is_active' => true]);
+        $this->assertDatabaseHas('users', ['username' => 'kitchen', 'role' => 'kitchen', 'is_active' => true]);
+        $this->assertDatabaseHas('users', ['username' => 'kitchen_liza', 'is_active' => false]);
+
         $this->assertSame(10, Table::query()->count());
-        $this->assertSame(4, Category::query()->count());
-        $this->assertGreaterThanOrEqual(10, MenuItem::query()->count());
+        $this->assertDatabaseHas('tables', ['table_number' => 'T-01', 'capacity' => 2]);
+        $this->assertDatabaseHas('tables', ['table_number' => 'T-10', 'capacity' => 8]);
+
+        $this->assertSame(3, Category::query()->count());
+        $this->assertSame(21, MenuItem::query()->count());
+        $this->assertDatabaseHas('menu_items', ['name' => 'Chicken Curry', 'is_available' => false]);
+        $this->assertDatabaseHas('menu_items', ['name' => 'Sinigang na Baboy', 'is_popular' => true]);
     }
 
     public function test_migrations_can_be_rolled_back_and_re_migrated_cleanly(): void

@@ -18,6 +18,7 @@ class StoreOrderRequest extends FormRequest
     {
         return [
             'table_id' => ['required', 'integer', 'exists:tables,id'],
+            'allow_occupied' => ['sometimes', 'boolean'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.menu_item_id' => ['required', 'integer', 'exists:menu_items,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],

@@ -29,8 +29,22 @@ class Table extends Model
      */
     protected $fillable = [
         'table_number',
+        'capacity',
         'status',
+        'active_order_id',
+        'active_order_ref',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'capacity' => 'integer',
+            'active_order_id' => 'integer',
+        ];
+    }
 
     public function orders(): HasMany
     {
@@ -40,7 +54,12 @@ class Table extends Model
     public function activeOrder(): HasOne
     {
         return $this->hasOne(Order::class, 'table_id')
-            ->where('status', '!=', Order::STATUS_PAID)
+            ->whereIn('status', [
+                Order::STATUS_PENDING,
+                Order::STATUS_PREPARING,
+                Order::STATUS_READY,
+                Order::STATUS_SERVED,
+            ])
             ->latestOfMany();
     }
 }

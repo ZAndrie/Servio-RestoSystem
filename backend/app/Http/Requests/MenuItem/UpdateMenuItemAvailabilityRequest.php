@@ -17,7 +17,7 @@ class UpdateMenuItemAvailabilityRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'is_available' => ['required', 'boolean'],
+            'is_available' => ['sometimes', 'boolean'],
         ];
     }
 }

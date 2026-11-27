@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Requests\MenuItem\StoreMenuItemRequest;
 use App\Http\Requests\MenuItem\UpdateMenuItemAvailabilityRequest;
 use App\Http\Requests\MenuItem\UpdateMenuItemRequest;
+use App\Models\Category;
 use App\Models\MenuItem;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 
 class MenuItemController extends Controller
@@ -33,7 +35,7 @@ class MenuItemController extends Controller
             }
         }
 
-        $items = $query->orderBy('category_id')->orderBy('name')->get();
+        $items = $query->orderBy('category_id')->orderBy('id')->get();
 
         return response()->json($items);
     }
@@ -41,7 +43,18 @@ class MenuItemController extends Controller
     public function store(StoreMenuItemRequest $request): JsonResponse
     {
         $data = $request->validated();
-        $data['is_available'] = $data['is_available'] ?? true;
+        $data['is_available'] = array_key_exists('is_available', $data)
+            ? (bool) $data['is_available']
+            : true;
+        $data['is_popular'] = array_key_exists('is_popular', $data)
+            ? (bool) $data['is_popular']
+            : false;
+        $data['artwork'] = $data['artwork'] ?? $this->defaultArtworkForCategory((int) $data['category_id']);
+
+        if ($request->hasFile('image')) {
+            $storedPath = $request->file('image')->store('menu', 'public');
+            $data['image'] = '/storage/'.$storedPath;
+        }
 
         $menuItem = MenuItem::query()->create($data)->load('category');
 
@@ -55,7 +68,20 @@ class MenuItemController extends Controller
 
     public function update(UpdateMenuItemRequest $request, MenuItem $menuItem): JsonResponse
     {
-        $menuItem->update($request->validated());
+        $data = $request->validated();
+        $removeImage = (bool) ($data['remove_image'] ?? false);
+        unset($data['remove_image']);
+
+        if ($request->hasFile('image')) {
+            $this->deleteStoredImageIfOwned($menuItem);
+            $storedPath = $request->file('image')->store('menu', 'public');
+            $data['image'] = '/storage/'.$storedPath;
+        } elseif ($removeImage) {
+            $this->deleteStoredImageIfOwned($menuItem);
+            $data['image'] = null;
+        }
+
+        $menuItem->update($data);
 
         return response()->json($menuItem->fresh('category'));
     }
@@ -69,6 +95,7 @@ class MenuItemController extends Controller
         }
 
         try {
+            $this->deleteStoredImageIfOwned($menuItem);
             $menuItem->delete();
         } catch (QueryException) {
             return response()->json([
@@ -83,10 +110,36 @@ class MenuItemController extends Controller
 
     public function updateAvailability(UpdateMenuItemAvailabilityRequest $request, MenuItem $menuItem): JsonResponse
     {
+        $nextAvailable = $request->has('is_available')
+            ? $request->boolean('is_available')
+            : ! $menuItem->is_available;
+
         $menuItem->update([
-            'is_available' => $request->boolean('is_available'),
+            'is_available' => $nextAvailable,
         ]);
 
         return response()->json($menuItem->fresh('category'));
+    }
+
+    private function defaultArtworkForCategory(int $categoryId): string
+    {
+        $slug = strtolower((string) (Category::query()->whereKey($categoryId)->value('slug') ?? ''));
+
+        return match ($slug) {
+            'drinks' => 'glass',
+            'desserts' => 'dessert',
+            default => 'bowl',
+        };
+    }
+
+    private function deleteStoredImageIfOwned(MenuItem $menuItem): void
+    {
+        $raw = $menuItem->getRawImagePath();
+        if ($raw && str_starts_with($raw, '/storage/')) {
+            $relative = substr($raw, strlen('/storage/'));
+            if ($relative !== '') {
+                Storage::disk('public')->delete($relative);
+            }
+        }
     }
 }

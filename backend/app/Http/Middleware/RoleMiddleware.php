@@ -23,6 +23,12 @@ class RoleMiddleware
             ], Response::HTTP_UNAUTHORIZED);
         }
 
+        if (! $user->is_active) {
+            return response()->json([
+                'message' => 'This staff account is inactive. Please ask your administrator.',
+            ], Response::HTTP_FORBIDDEN);
+        }
+
         if (! in_array($user->role, $roles, true)) {
             return response()->json([
                 'message' => 'Forbidden. You do not have permission to access this resource.',

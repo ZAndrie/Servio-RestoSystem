@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -23,6 +24,12 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'Invalid username or password.',
             ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        if (! $user->is_active) {
+            return response()->json([
+                'message' => 'This staff account is inactive. Please ask your administrator.',
+            ], Response::HTTP_FORBIDDEN);
         }
 
         $token = $user->createToken('servio-api-token')->plainTextToken;
@@ -47,6 +54,22 @@ class AuthController extends Controller
     {
         return response()->json([
             'user' => $request->user(),
+        ]);
+    }
+
+    public function changePassword(ChangePasswordRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $user->update([
+            'password' => $request->validated('password'),
+            'must_change_password' => false,
+        ]);
+
+        return response()->json([
+            'message' => 'Password updated successfully.',
+            'user' => $user->fresh(),
         ]);
     }
 }

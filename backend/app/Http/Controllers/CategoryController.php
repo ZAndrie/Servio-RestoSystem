@@ -7,6 +7,7 @@ use App\Http\Requests\Category\UpdateCategoryRequest;
 use App\Models\Category;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class CategoryController extends Controller
@@ -15,7 +16,7 @@ class CategoryController extends Controller
     {
         $categories = Category::query()
             ->withCount('menuItems')
-            ->orderBy('name')
+            ->orderBy('id')
             ->get();
 
         return response()->json($categories);
@@ -23,7 +24,10 @@ class CategoryController extends Controller
 
     public function store(StoreCategoryRequest $request): JsonResponse
     {
-        $category = Category::query()->create($request->validated());
+        $data = $request->validated();
+        $data['slug'] = Str::slug($data['name']);
+
+        $category = Category::query()->create($data);
 
         return response()->json($category, Response::HTTP_CREATED);
     }
@@ -35,7 +39,10 @@ class CategoryController extends Controller
 
     public function update(UpdateCategoryRequest $request, Category $category): JsonResponse
     {
-        $category->update($request->validated());
+        $data = $request->validated();
+        $data['slug'] = Str::slug($data['name']);
+
+        $category->update($data);
 
         return response()->json($category->fresh());
     }
