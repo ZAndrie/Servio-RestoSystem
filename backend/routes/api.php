@@ -9,74 +9,77 @@ use App\Http\Controllers\TableController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
-// Public authentication endpoint
-Route::post('/login', [AuthController::class, 'login']);
+// Public authentication endpoint (rate limited per username + IP)
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
-// Protected API endpoints (Sanctum token required)
-Route::middleware('auth:sanctum')->group(function (): void {
-    // Auth
+// Protected API endpoints (Sanctum token + active staff account required)
+Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
+    // Auth endpoints remain reachable even when must_change_password is true
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
 
-    // Staff & Users (Admin only)
-    Route::middleware('role:admin')->group(function (): void {
-        Route::get('/users', [UserController::class, 'index']);
-        Route::post('/users', [UserController::class, 'store']);
-        Route::get('/users/{user}', [UserController::class, 'show']);
-        Route::put('/users/{user}', [UserController::class, 'update']);
-        Route::patch('/users/{user}/toggle-active', [UserController::class, 'toggleActive']);
-        Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword']);
-        Route::delete('/users/{user}', [UserController::class, 'destroy']);
+    // Operational API endpoints require temporary passwords to be changed first
+    Route::middleware('password.changed')->group(function (): void {
+        // Staff & Users (Admin only)
+        Route::middleware('role:admin')->group(function (): void {
+            Route::get('/users', [UserController::class, 'index']);
+            Route::post('/users', [UserController::class, 'store']);
+            Route::get('/users/{user}', [UserController::class, 'show']);
+            Route::put('/users/{user}', [UserController::class, 'update']);
+            Route::patch('/users/{user}/toggle-active', [UserController::class, 'toggleActive']);
+            Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword']);
+            Route::delete('/users/{user}', [UserController::class, 'destroy']);
+        });
+
+        // Categories (GET: all authenticated roles; write: Admin only)
+        Route::get('/categories', [CategoryController::class, 'index']);
+        Route::get('/categories/{category}', [CategoryController::class, 'show']);
+        Route::middleware('role:admin')->group(function (): void {
+            Route::post('/categories', [CategoryController::class, 'store']);
+            Route::put('/categories/{category}', [CategoryController::class, 'update']);
+            Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+        });
+
+        // Menu Items (GET: all authenticated roles; write & availability: Admin only)
+        Route::get('/menu-items', [MenuItemController::class, 'index']);
+        Route::get('/menu-items/{menuItem}', [MenuItemController::class, 'show']);
+        Route::middleware('role:admin')->group(function (): void {
+            Route::post('/menu-items', [MenuItemController::class, 'store']);
+            Route::put('/menu-items/{menuItem}', [MenuItemController::class, 'update']);
+            Route::delete('/menu-items/{menuItem}', [MenuItemController::class, 'destroy']);
+            Route::patch('/menu-items/{menuItem}/availability', [MenuItemController::class, 'updateAvailability']);
+        });
+
+        // Tables & Floor Management (Waiter, Admin)
+        Route::middleware('role:waiter,admin')->group(function (): void {
+            Route::get('/tables', [TableController::class, 'index']);
+            Route::patch('/tables/{table}/occupy', [TableController::class, 'occupy']);
+            Route::patch('/tables/{table}/release', [TableController::class, 'release']);
+        });
+
+        // Orders (Pay-First, Dine-After + KDS)
+        Route::get('/orders', [OrderController::class, 'index'])
+            ->middleware('role:waiter,kitchen,admin');
+        Route::get('/orders/{order}', [OrderController::class, 'show'])
+            ->middleware('role:waiter,kitchen,admin');
+        Route::post('/orders', [OrderController::class, 'store'])
+            ->middleware('role:waiter,admin');
+        Route::put('/orders/{order}/items', [OrderController::class, 'updateItems'])
+            ->middleware('role:waiter,admin');
+        Route::post('/orders/{order}/add-items', [OrderController::class, 'addItems'])
+            ->middleware('role:waiter,admin');
+        Route::post('/orders/{order}/pay', [OrderController::class, 'pay'])
+            ->middleware('role:waiter,admin');
+        Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])
+            ->middleware('role:waiter,admin');
+        Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])
+            ->middleware('role:kitchen,waiter,admin');
+
+        // Reports & Dashboard
+        Route::get('/reports/daily', [ReportController::class, 'daily'])
+            ->middleware('role:admin');
+        Route::get('/dashboard', [ReportController::class, 'dashboard'])
+            ->middleware('role:admin,waiter');
     });
-
-    // Categories (GET: all authenticated roles; write: Admin only)
-    Route::get('/categories', [CategoryController::class, 'index']);
-    Route::get('/categories/{category}', [CategoryController::class, 'show']);
-    Route::middleware('role:admin')->group(function (): void {
-        Route::post('/categories', [CategoryController::class, 'store']);
-        Route::put('/categories/{category}', [CategoryController::class, 'update']);
-        Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
-    });
-
-    // Menu Items (GET: all authenticated roles; write & availability: Admin only)
-    Route::get('/menu-items', [MenuItemController::class, 'index']);
-    Route::get('/menu-items/{menuItem}', [MenuItemController::class, 'show']);
-    Route::middleware('role:admin')->group(function (): void {
-        Route::post('/menu-items', [MenuItemController::class, 'store']);
-        Route::put('/menu-items/{menuItem}', [MenuItemController::class, 'update']);
-        Route::delete('/menu-items/{menuItem}', [MenuItemController::class, 'destroy']);
-        Route::patch('/menu-items/{menuItem}/availability', [MenuItemController::class, 'updateAvailability']);
-    });
-
-    // Tables & Floor Management (Waiter, Admin)
-    Route::middleware('role:waiter,admin')->group(function (): void {
-        Route::get('/tables', [TableController::class, 'index']);
-        Route::patch('/tables/{table}/occupy', [TableController::class, 'occupy']);
-        Route::patch('/tables/{table}/release', [TableController::class, 'release']);
-    });
-
-    // Orders (Pay-First, Dine-After + KDS)
-    Route::get('/orders', [OrderController::class, 'index'])
-        ->middleware('role:waiter,kitchen,admin');
-    Route::get('/orders/{order}', [OrderController::class, 'show'])
-        ->middleware('role:waiter,kitchen,admin');
-    Route::post('/orders', [OrderController::class, 'store'])
-        ->middleware('role:waiter,admin');
-    Route::put('/orders/{order}/items', [OrderController::class, 'updateItems'])
-        ->middleware('role:waiter,admin');
-    Route::post('/orders/{order}/add-items', [OrderController::class, 'addItems'])
-        ->middleware('role:waiter,admin');
-    Route::post('/orders/{order}/pay', [OrderController::class, 'pay'])
-        ->middleware('role:waiter,admin');
-    Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])
-        ->middleware('role:waiter,admin');
-    Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])
-        ->middleware('role:kitchen,waiter,admin');
-
-    // Reports & Dashboard
-    Route::get('/reports/daily', [ReportController::class, 'daily'])
-        ->middleware('role:admin');
-    Route::get('/dashboard', [ReportController::class, 'dashboard'])
-        ->middleware('role:admin,waiter');
 });

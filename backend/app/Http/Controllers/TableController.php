@@ -6,16 +6,18 @@ use App\Http\Requests\Table\OccupyTableRequest;
 use App\Http\Requests\Table\ReleaseTableRequest;
 use App\Models\Order;
 use App\Models\Table;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
 
 class TableController extends Controller
 {
     public function index(): JsonResponse
     {
         $tables = Table::query()
-            ->with(['activeOrder' => function ($query) {
+            ->with(['activeOrder' => function ($query): void {
                 $query->select(
                     'orders.id',
                     'orders.order_ref',
@@ -25,7 +27,10 @@ class TableController extends Controller
                     'orders.payment_status',
                     'orders.total',
                     'orders.created_at'
-                );
+                )->with([
+                    'table:id,table_number',
+                    'user:id,name',
+                ]);
             }])
             ->orderBy('id')
             ->get();
@@ -41,15 +46,30 @@ class TableController extends Controller
             /** @var Table $lockedTable */
             $lockedTable = Table::query()->lockForUpdate()->findOrFail($table->id);
             /** @var Order $order */
-            $order = Order::query()->findOrFail($validated['order_id']);
+            $order = Order::query()->lockForUpdate()->findOrFail($validated['order_id']);
+
+            if ((int) $order->table_id !== (int) $lockedTable->id) {
+                throw ValidationException::withMessages([
+                    'order_id' => ["Order {$order->order_ref} does not belong to table {$lockedTable->table_number}."],
+                ]);
+            }
+
+            if (! in_array($order->status, Order::ACTIVE_STATUSES, true)) {
+                throw ValidationException::withMessages([
+                    'order_id' => ["Only active orders can occupy table {$lockedTable->table_number}."],
+                ]);
+            }
 
             $lockedTable->update([
                 'status' => Table::STATUS_OCCUPIED,
                 'active_order_id' => $order->id,
-                'active_order_ref' => $validated['order_ref'] ?? $order->order_ref,
+                'active_order_ref' => $order->order_ref,
             ]);
 
-            return $lockedTable->fresh('activeOrder');
+            return $lockedTable->fresh([
+                'activeOrder.table:id,table_number',
+                'activeOrder.user:id,name',
+            ]);
         });
 
         return response()->json($updated);
@@ -58,7 +78,15 @@ class TableController extends Controller
     public function release(ReleaseTableRequest $request, Table $table): JsonResponse
     {
         $force = $request->boolean('force', false);
-        $actorId = $request->user()?->id;
+        $actor = $request->user();
+
+        if ($force && $actor?->role !== User::ROLE_ADMIN) {
+            return response()->json([
+                'message' => 'Forbidden. Only administrators can force-clear tables.',
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        $actorId = $actor?->id;
 
         $result = DB::transaction(function () use ($table, $force, $actorId): array {
             /** @var Table $lockedTable */
@@ -98,6 +126,7 @@ class TableController extends Controller
                         'status' => Order::STATUS_CANCELLED,
                         'cancellation_reason' => 'Table force-cleared',
                         'cancelled_by' => $actorId,
+                        'cancelled_at' => now(),
                     ]);
                 }
 

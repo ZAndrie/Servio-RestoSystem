@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthController extends Controller
@@ -66,6 +67,12 @@ class AuthController extends Controller
             'password' => $request->validated('password'),
             'must_change_password' => false,
         ]);
+
+        // Revoke all other active sessions while keeping the current session alive.
+        $currentToken = $user->currentAccessToken();
+        if ($currentToken instanceof PersonalAccessToken) {
+            $user->tokens()->whereKeyNot($currentToken->id)->delete();
+        }
 
         return response()->json([
             'message' => 'Password updated successfully.',

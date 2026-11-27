@@ -46,9 +46,17 @@ class MenuItem extends Model
         }
 
         // Uploaded files stored under /storage/menu/... are served by Laravel,
-        // so return an absolute URL accessible across ports/LAN tablets.
+        // so return an absolute URL matching the current LAN host when handling HTTP requests.
         if (str_starts_with($value, '/storage/')) {
-            return rtrim((string) config('app.url', 'http://localhost:8000'), '/').$value;
+            $baseUrl = (! app()->runningInConsole() && app()->bound('request'))
+                ? request()->getSchemeAndHttpHost()
+                : (string) config('app.url', 'http://localhost:8000');
+
+            if ($baseUrl === '') {
+                $baseUrl = (string) config('app.url', 'http://localhost:8000');
+            }
+
+            return rtrim($baseUrl, '/').$value;
         }
 
         return $value;

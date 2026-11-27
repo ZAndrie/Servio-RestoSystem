@@ -18,7 +18,6 @@ class CancelOrderRequest extends FormRequest
     {
         return [
             'reason' => ['required', 'string', 'min:3', 'max:255'],
-            'cancelled_by' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
         ];
     }
 }

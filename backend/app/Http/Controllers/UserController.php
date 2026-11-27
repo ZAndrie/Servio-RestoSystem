@@ -44,7 +44,25 @@ class UserController extends Controller
             unset($data['password']);
         }
 
+        $isSelf = $request->user()?->id === $user->id;
+        $roleChanged = array_key_exists('role', $data) && $data['role'] !== $user->role;
+
+        if ($isSelf && $roleChanged) {
+            return response()->json([
+                'message' => 'You cannot change your own account role.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $passwordChanged = array_key_exists('password', $data);
+        if ($passwordChanged && ! $isSelf) {
+            $data['must_change_password'] = true;
+        }
+
         $user->update($data);
+
+        if ($roleChanged || ($passwordChanged && ! $isSelf)) {
+            $user->tokens()->delete();
+        }
 
         return response()->json($user->fresh());
     }

@@ -19,7 +19,7 @@ class UpdateOrderItemsRequest extends FormRequest
         return [
             'items' => ['required', 'array', 'min:1'],
             'items.*.menu_item_id' => ['required', 'integer', 'exists:menu_items,id'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.quantity' => ['required', 'integer', 'min:1', 'max:999'],
             'items.*.notes' => ['nullable', 'string', 'max:255'],
         ];
     }

@@ -87,6 +87,7 @@ class Order extends Model
         'amount_paid',
         'cancellation_reason',
         'cancelled_by',
+        'cancelled_at',
         'paid_at',
         'created_at',
     ];
@@ -110,6 +111,7 @@ class Order extends Model
             'service_charge' => 'decimal:2',
             'total' => 'decimal:2',
             'amount_paid' => 'decimal:2',
+            'cancelled_at' => 'datetime',
             'paid_at' => 'datetime',
         ];
     }

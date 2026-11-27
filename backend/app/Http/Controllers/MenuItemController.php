@@ -73,12 +73,31 @@ class MenuItemController extends Controller
         unset($data['remove_image']);
 
         if ($request->hasFile('image')) {
-            $this->deleteStoredImageIfOwned($menuItem);
+            $oldRawImage = $menuItem->getRawImagePath();
             $storedPath = $request->file('image')->store('menu', 'public');
             $data['image'] = '/storage/'.$storedPath;
-        } elseif ($removeImage) {
-            $this->deleteStoredImageIfOwned($menuItem);
+            $menuItem->update($data);
+            $this->deleteStoredPathIfOwned($oldRawImage);
+
+            return response()->json($menuItem->fresh('category'));
+        }
+
+        if ($removeImage) {
+            $oldRawImage = $menuItem->getRawImagePath();
             $data['image'] = null;
+            $menuItem->update($data);
+            $this->deleteStoredPathIfOwned($oldRawImage);
+
+            return response()->json($menuItem->fresh('category'));
+        }
+
+        // Preserve raw /storage/... path when frontend echoes back the resolved image URL unchanged.
+        if (
+            array_key_exists('image', $data)
+            && is_string($data['image'])
+            && ($data['image'] === $menuItem->image || $data['image'] === $menuItem->getRawImagePath())
+        ) {
+            unset($data['image']);
         }
 
         $menuItem->update($data);
@@ -94,14 +113,17 @@ class MenuItemController extends Controller
             ], Response::HTTP_CONFLICT);
         }
 
+        $oldRawImage = $menuItem->getRawImagePath();
+
         try {
-            $this->deleteStoredImageIfOwned($menuItem);
             $menuItem->delete();
         } catch (QueryException) {
             return response()->json([
                 'message' => 'Cannot delete menu item because it is referenced by existing orders.',
             ], Response::HTTP_CONFLICT);
         }
+
+        $this->deleteStoredPathIfOwned($oldRawImage);
 
         return response()->json([
             'message' => 'Menu item deleted successfully.',
@@ -132,9 +154,8 @@ class MenuItemController extends Controller
         };
     }
 
-    private function deleteStoredImageIfOwned(MenuItem $menuItem): void
+    private function deleteStoredPathIfOwned(?string $raw): void
     {
-        $raw = $menuItem->getRawImagePath();
         if ($raw && str_starts_with($raw, '/storage/')) {
             $relative = substr($raw, strlen('/storage/'));
             if ($relative !== '') {

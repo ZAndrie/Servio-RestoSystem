@@ -13,9 +13,11 @@ use App\Models\Table;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 class OrderController extends Controller
 {
@@ -51,13 +53,91 @@ class OrderController extends Controller
             $query->where('payment_status', $paymentStatus);
         }
 
-        // Kitchen queue filters are FIFO (oldest first); full feed is newest first.
-        $isActiveQueue = $statuses !== []
-            && ! in_array(Order::STATUS_PAID, $statuses, true)
-            && ! in_array(Order::STATUS_CANCELLED, $statuses, true);
+        $activeOnly = false;
+        if ($request->has('active_only') && $request->query('active_only') !== '') {
+            $parsedActive = filter_var(
+                $request->query('active_only'),
+                FILTER_VALIDATE_BOOLEAN,
+                FILTER_NULL_ON_FAILURE
+            );
 
-        $query->orderBy('created_at', $isActiveQueue ? 'asc' : 'desc')
-            ->orderBy('id', $isActiveQueue ? 'asc' : 'desc');
+            if ($parsedActive === null) {
+                throw ValidationException::withMessages([
+                    'active_only' => ['The active_only filter must be true or false.'],
+                ]);
+            }
+
+            $activeOnly = $parsedActive;
+            if ($activeOnly) {
+                $query->whereIn('status', Order::ACTIVE_STATUSES);
+            }
+        }
+
+        if ($request->filled('date')) {
+            $dateString = trim((string) $request->query('date'));
+            if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateString)) {
+                throw ValidationException::withMessages([
+                    'date' => ['The date filter must be in YYYY-MM-DD format.'],
+                ]);
+            }
+
+            $timezone = (string) config('app.timezone', 'Asia/Manila');
+            try {
+                $parsedDate = Carbon::createFromFormat('!Y-m-d', $dateString, $timezone);
+                if (! $parsedDate || $parsedDate->format('Y-m-d') !== $dateString) {
+                    throw new \InvalidArgumentException('Invalid calendar date.');
+                }
+            } catch (Throwable) {
+                throw ValidationException::withMessages([
+                    'date' => ['The date filter is not a valid calendar date.'],
+                ]);
+            }
+
+            $start = $parsedDate->copy()->startOfDay();
+            $end = $parsedDate->copy()->endOfDay();
+
+            $query->where(function ($subQuery) use ($start, $end): void {
+                $subQuery->whereBetween('paid_at', [$start, $end])
+                    ->orWhereBetween('created_at', [$start, $end]);
+            });
+        }
+
+        if ($request->filled('since')) {
+            try {
+                $since = Carbon::parse((string) $request->query('since'));
+            } catch (Throwable) {
+                throw ValidationException::withMessages([
+                    'since' => ['The since filter must be a valid ISO-8601 timestamp.'],
+                ]);
+            }
+
+            $query->where('updated_at', '>=', $since);
+        }
+
+        // Kitchen queue filters are FIFO (oldest paid/created first); full feed is newest first.
+        $isActiveQueue = ($activeOnly && $statuses === [])
+            || ($statuses !== []
+                && ! in_array(Order::STATUS_PAID, $statuses, true)
+                && ! in_array(Order::STATUS_CANCELLED, $statuses, true));
+
+        if ($isActiveQueue) {
+            $query->orderByRaw('COALESCE(paid_at, created_at) ASC')
+                ->orderBy('id', 'asc');
+        } else {
+            $query->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc');
+        }
+
+        if ($request->filled('per_page')) {
+            $perPageRaw = $request->query('per_page');
+            if (! is_numeric($perPageRaw) || (int) $perPageRaw < 1 || (int) $perPageRaw > 100) {
+                throw ValidationException::withMessages([
+                    'per_page' => ['The per_page parameter must be an integer between 1 and 100.'],
+                ]);
+            }
+
+            return response()->json($query->paginate((int) $perPageRaw));
+        }
 
         return response()->json($query->get());
     }
@@ -157,6 +237,12 @@ class OrderController extends Controller
             /** @var Order $lockedOrder */
             $lockedOrder = Order::query()->with('items')->lockForUpdate()->findOrFail($order->id);
 
+            if ($lockedOrder->payment_status === Order::PAYMENT_PAID) {
+                throw ValidationException::withMessages([
+                    'status' => ['Paid orders cannot be modified. Create an Extra Food order instead.'],
+                ]);
+            }
+
             if (in_array($lockedOrder->status, [Order::STATUS_PAID, Order::STATUS_CANCELLED], true)) {
                 throw ValidationException::withMessages([
                     'status' => ['Cannot add items to a completed or cancelled order.'],
@@ -189,44 +275,57 @@ class OrderController extends Controller
         $targetStatus = $request->validated('status');
         $user = $request->user();
 
-        if ($order->status === Order::STATUS_CANCELLED) {
-            throw ValidationException::withMessages([
-                'status' => ['Cancelled orders cannot change status.'],
+        return DB::transaction(function () use ($order, $targetStatus, $user): JsonResponse {
+            // Consistent lock hierarchy: always lock parent table before order to prevent deadlocks.
+            /** @var Table $lockedTable */
+            $lockedTable = Table::query()->lockForUpdate()->findOrFail($order->table_id);
+
+            /** @var Order $lockedOrder */
+            $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->id);
+
+            if ($lockedOrder->status === Order::STATUS_CANCELLED) {
+                throw ValidationException::withMessages([
+                    'status' => ['Cancelled orders cannot change status.'],
+                ]);
+            }
+
+            if ($lockedOrder->payment_status !== Order::PAYMENT_PAID) {
+                throw ValidationException::withMessages([
+                    'status' => ['Order must be paid before kitchen preparation or service can proceed.'],
+                ]);
+            }
+
+            if (! $lockedOrder->canTransitionTo($targetStatus)) {
+                throw ValidationException::withMessages([
+                    'status' => ["Invalid status transition from '{$lockedOrder->status}' to '{$targetStatus}'."],
+                ]);
+            }
+
+            $allowedRolesByTarget = [
+                Order::STATUS_PREPARING => [User::ROLE_KITCHEN, User::ROLE_ADMIN],
+                Order::STATUS_READY => [User::ROLE_KITCHEN, User::ROLE_ADMIN],
+                Order::STATUS_SERVED => [User::ROLE_WAITER, User::ROLE_ADMIN],
+                Order::STATUS_PAID => [User::ROLE_WAITER, User::ROLE_ADMIN],
+            ];
+
+            $allowedRoles = $allowedRolesByTarget[$targetStatus] ?? [];
+
+            if (! in_array($user->role, $allowedRoles, true)) {
+                return response()->json([
+                    'message' => "Forbidden. Your role cannot move an order to '{$targetStatus}'.",
+                ], Response::HTTP_FORBIDDEN);
+            }
+
+            $lockedOrder->update([
+                'status' => $targetStatus,
             ]);
-        }
 
-        if ($order->payment_status !== Order::PAYMENT_PAID) {
-            throw ValidationException::withMessages([
-                'status' => ['Order must be paid before kitchen preparation or service can proceed.'],
-            ]);
-        }
+            if ($targetStatus === Order::STATUS_PAID) {
+                $this->syncTableState($lockedTable, $lockedOrder->id);
+            }
 
-        if (! $order->canTransitionTo($targetStatus)) {
-            throw ValidationException::withMessages([
-                'status' => ["Invalid status transition from '{$order->status}' to '{$targetStatus}'."],
-            ]);
-        }
-
-        $allowedRolesByTarget = [
-            Order::STATUS_PREPARING => [User::ROLE_KITCHEN, User::ROLE_ADMIN],
-            Order::STATUS_READY => [User::ROLE_KITCHEN, User::ROLE_ADMIN],
-            Order::STATUS_SERVED => [User::ROLE_WAITER, User::ROLE_ADMIN],
-            Order::STATUS_PAID => [User::ROLE_WAITER, User::ROLE_ADMIN],
-        ];
-
-        $allowedRoles = $allowedRolesByTarget[$targetStatus] ?? [];
-
-        if (! in_array($user->role, $allowedRoles, true)) {
-            return response()->json([
-                'message' => "Forbidden. Your role cannot move an order to '{$targetStatus}'.",
-            ], Response::HTTP_FORBIDDEN);
-        }
-
-        $order->update([
-            'status' => $targetStatus,
-        ]);
-
-        return response()->json($order->fresh($this->orderRelations()));
+            return response()->json($lockedOrder->fresh($this->orderRelations()));
+        });
     }
 
     public function pay(PayOrderRequest $request, Order $order): JsonResponse
@@ -234,6 +333,10 @@ class OrderController extends Controller
         $validated = $request->validated();
 
         $paidOrder = DB::transaction(function () use ($order, $validated): Order {
+            // Consistent lock hierarchy: always lock parent table before order to prevent deadlocks.
+            /** @var Table $lockedTable */
+            $lockedTable = Table::query()->lockForUpdate()->findOrFail($order->table_id);
+
             /** @var Order $lockedOrder */
             $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->id);
 
@@ -268,8 +371,8 @@ class OrderController extends Controller
             $now = now();
 
             // Pay-First, Dine-After: mark payment_status='paid', keep status='pending' so
-            // the Kitchen Display receives the ticket, start prep timer at paid moment,
-            // and keep the table occupied until guests finish dining.
+            // the Kitchen Display receives the ticket, start prep timer at paid moment
+            // (retained for current frontend OrderCard.vue compatibility), and keep the table occupied.
             $lockedOrder->update([
                 'payment_status' => Order::PAYMENT_PAID,
                 'status' => Order::STATUS_PENDING,
@@ -279,14 +382,11 @@ class OrderController extends Controller
                 'created_at' => $now,
             ]);
 
-            Table::query()
-                ->whereKey($lockedOrder->table_id)
-                ->lockForUpdate()
-                ->update([
-                    'status' => Table::STATUS_OCCUPIED,
-                    'active_order_id' => $lockedOrder->id,
-                    'active_order_ref' => $lockedOrder->order_ref,
-                ]);
+            $lockedTable->update([
+                'status' => Table::STATUS_OCCUPIED,
+                'active_order_id' => $lockedOrder->id,
+                'active_order_ref' => $lockedOrder->order_ref,
+            ]);
 
             return $lockedOrder->fresh($this->orderRelations());
         });
@@ -300,6 +400,10 @@ class OrderController extends Controller
         $actorId = $request->user()->id;
 
         $cancelledOrder = DB::transaction(function () use ($order, $validated, $actorId): Order {
+            // Consistent lock hierarchy: always lock parent table before order to prevent deadlocks.
+            /** @var Table $lockedTable */
+            $lockedTable = Table::query()->lockForUpdate()->findOrFail($order->table_id);
+
             /** @var Order $lockedOrder */
             $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->id);
 
@@ -319,36 +423,42 @@ class OrderController extends Controller
                 'status' => Order::STATUS_CANCELLED,
                 'cancellation_reason' => trim($validated['reason']),
                 'cancelled_by' => $actorId,
+                'cancelled_at' => now(),
             ]);
 
-            $remainingActive = Order::query()
-                ->where('table_id', $lockedOrder->table_id)
-                ->whereKeyNot($lockedOrder->id)
-                ->whereIn('status', Order::ACTIVE_STATUSES)
-                ->latest('id')
-                ->first();
-
-            /** @var Table $table */
-            $table = Table::query()->lockForUpdate()->findOrFail($lockedOrder->table_id);
-
-            if ($remainingActive) {
-                $table->update([
-                    'status' => Table::STATUS_OCCUPIED,
-                    'active_order_id' => $remainingActive->id,
-                    'active_order_ref' => $remainingActive->order_ref,
-                ]);
-            } else {
-                $table->update([
-                    'status' => Table::STATUS_AVAILABLE,
-                    'active_order_id' => null,
-                    'active_order_ref' => null,
-                ]);
-            }
+            $this->syncTableState($lockedTable, $lockedOrder->id);
 
             return $lockedOrder->fresh($this->orderRelations());
         });
 
         return response()->json($cancelledOrder);
+    }
+
+    /**
+     * Recompute table occupancy after an order leaves the active statuses.
+     */
+    private function syncTableState(Table $lockedTable, int $excludedOrderId): void
+    {
+        $remainingActive = Order::query()
+            ->where('table_id', $lockedTable->id)
+            ->whereKeyNot($excludedOrderId)
+            ->whereIn('status', Order::ACTIVE_STATUSES)
+            ->latest('id')
+            ->first();
+
+        if ($remainingActive) {
+            $lockedTable->update([
+                'status' => Table::STATUS_OCCUPIED,
+                'active_order_id' => $remainingActive->id,
+                'active_order_ref' => $remainingActive->order_ref,
+            ]);
+        } else {
+            $lockedTable->update([
+                'status' => Table::STATUS_AVAILABLE,
+                'active_order_id' => null,
+                'active_order_ref' => null,
+            ]);
+        }
     }
 
     /**

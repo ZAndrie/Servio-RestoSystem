@@ -350,4 +350,150 @@ class OrderLifecycleAndBusinessRulesTest extends TestCase
         $this->patchJson("/api/orders/{$order->id}/status", ['status' => 'served'])
             ->assertForbidden();
     }
+
+    public function test_add_items_is_allowed_on_unpaid_orders_but_blocked_on_paid_orders(): void
+    {
+        $waiter = User::factory()->waiter()->create();
+        $category = Category::query()->create(['name' => 'Dishes', 'slug' => 'dishes']);
+        $dish = MenuItem::query()->create([
+            'category_id' => $category->id,
+            'name' => 'Sisig',
+            'price' => 290.00,
+            'is_available' => true,
+        ]);
+        $drink = MenuItem::query()->create([
+            'category_id' => $category->id,
+            'name' => 'Iced Tea',
+            'price' => 65.00,
+            'is_available' => true,
+        ]);
+        $table = Table::query()->create(['table_number' => 'T-07', 'capacity' => 4, 'status' => Table::STATUS_AVAILABLE]);
+
+        Sanctum::actingAs($waiter);
+
+        $orderId = $this->postJson('/api/orders', [
+            'table_id' => $table->id,
+            'items' => [['menu_item_id' => $dish->id, 'quantity' => 1]],
+        ])->assertCreated()->json('id');
+
+        // Unpaid draft allows add-items
+        $this->postJson("/api/orders/{$orderId}/add-items", [
+            'items' => [['menu_item_id' => $drink->id, 'quantity' => 1]],
+        ])->assertOk()
+            ->assertJsonPath('total', '355.00');
+
+        // Pay order -> Pay-First invariant now blocks add-items
+        $this->postJson("/api/orders/{$orderId}/pay", [
+            'payment_method' => 'cash',
+            'amount_paid' => 400.00,
+        ])->assertOk();
+
+        $this->postJson("/api/orders/{$orderId}/add-items", [
+            'items' => [['menu_item_id' => $drink->id, 'quantity' => 1]],
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $orderId,
+            'total' => '355.00',
+        ]);
+    }
+
+    public function test_status_transition_to_paid_syncs_table_occupancy_and_validates_occupy_and_force_release(): void
+    {
+        $waiter = User::factory()->waiter()->create();
+        $admin = User::factory()->admin()->create();
+        $category = Category::query()->create(['name' => 'Dishes', 'slug' => 'dishes']);
+        $dish = MenuItem::query()->create([
+            'category_id' => $category->id,
+            'name' => 'Adobo',
+            'price' => 240.00,
+            'is_available' => true,
+        ]);
+        $table1 = Table::query()->create(['table_number' => 'T-08', 'capacity' => 4, 'status' => Table::STATUS_AVAILABLE]);
+        $table2 = Table::query()->create(['table_number' => 'T-09', 'capacity' => 4, 'status' => Table::STATUS_AVAILABLE]);
+
+        Sanctum::actingAs($waiter);
+
+        // Quantity > 999 rejected
+        $this->postJson('/api/orders', [
+            'table_id' => $table1->id,
+            'items' => [['menu_item_id' => $dish->id, 'quantity' => 1000]],
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('items.0.quantity');
+
+        // Create & pay Order 1 on table1
+        $order1 = $this->postJson('/api/orders', [
+            'table_id' => $table1->id,
+            'items' => [['menu_item_id' => $dish->id, 'quantity' => 1]],
+        ])->assertCreated();
+        $order1Id = $order1->json('id');
+        $order1Ref = $order1->json('order_ref');
+
+        // Cannot occupy table2 with table1's order
+        $this->patchJson("/api/tables/{$table2->id}/occupy", [
+            'order_id' => $order1Id,
+            'order_ref' => 'SPOOFED-999',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('order_id');
+
+        // Valid occupy derives order_ref from server, ignoring spoofed value
+        $this->patchJson("/api/tables/{$table1->id}/occupy", [
+            'order_id' => $order1Id,
+            'order_ref' => 'SPOOFED-999',
+        ])->assertOk()
+            ->assertJsonPath('active_order_ref', $order1Ref);
+
+        // Waiter cannot force-release table with unpaid order (403)
+        $this->patchJson("/api/tables/{$table1->id}/release", ['force' => true])
+            ->assertForbidden();
+
+        // Admin CAN force-release table -> cancels unpaid order with cancelled_at and frees table
+        Sanctum::actingAs($admin);
+        $this->patchJson("/api/tables/{$table1->id}/release", ['force' => true])
+            ->assertOk()
+            ->assertJsonPath('table.status', Table::STATUS_AVAILABLE);
+
+        $cancelledOrder = Order::query()->findOrFail($order1Id);
+        $this->assertSame(Order::STATUS_CANCELLED, $cancelledOrder->status);
+        $this->assertNotNull($cancelledOrder->cancelled_at);
+
+        // Cancelled order cannot occupy a table
+        $this->patchJson("/api/tables/{$table1->id}/occupy", [
+            'order_id' => $order1Id,
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('order_id');
+
+        // Direct PATCH /orders/{id}/status served -> paid frees table automatically when no active orders remain
+        Sanctum::actingAs($waiter);
+        $order2Id = $this->postJson('/api/orders', [
+            'table_id' => $table1->id,
+            'items' => [['menu_item_id' => $dish->id, 'quantity' => 1]],
+        ])->assertCreated()->json('id');
+
+        $this->postJson("/api/orders/{$order2Id}/pay", [
+            'payment_method' => 'cash',
+            'amount_paid' => 240.00,
+        ])->assertOk();
+
+        Sanctum::actingAs($admin);
+        $this->patchJson("/api/orders/{$order2Id}/status", ['status' => 'preparing'])->assertOk();
+        $this->patchJson("/api/orders/{$order2Id}/status", ['status' => 'ready'])->assertOk();
+        $this->patchJson("/api/orders/{$order2Id}/status", ['status' => 'served'])->assertOk();
+        $this->patchJson("/api/orders/{$order2Id}/status", ['status' => 'paid'])->assertOk();
+
+        $this->assertDatabaseHas('tables', [
+            'id' => $table1->id,
+            'status' => Table::STATUS_AVAILABLE,
+            'active_order_id' => null,
+            'active_order_ref' => null,
+        ]);
+
+        // Optional GET /orders filters & opt-in pagination work without breaking plain-array default
+        $this->getJson('/api/orders?active_only=1')->assertOk()->assertJsonCount(0);
+        $this->getJson('/api/orders?per_page=1')
+            ->assertOk()
+            ->assertJsonStructure(['data', 'current_page', 'per_page', 'total'])
+            ->assertJsonPath('per_page', 1);
+    }
 }

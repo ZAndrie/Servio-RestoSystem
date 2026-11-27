@@ -11,6 +11,7 @@ use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -83,7 +84,20 @@ class ReportsAndMigrationsTest extends TestCase
             'payment_method' => Order::PAYMENT_CASH,
             'amount_paid' => 500.00,
             'cancellation_reason' => 'Refunded',
+            'cancelled_at' => now(),
             'paid_at' => now(),
+        ]);
+
+        // Cancelled yesterday (even though updated_at is today) — excluded from today's cancellation count!
+        Order::query()->create([
+            'order_ref' => 'ORD-1006',
+            'table_id' => $t1->id,
+            'user_id' => $waiter->id,
+            'status' => Order::STATUS_CANCELLED,
+            'payment_status' => Order::PAYMENT_UNPAID,
+            'total' => 120.00,
+            'cancellation_reason' => 'Old cancellation',
+            'cancelled_at' => now()->subDay(),
         ]);
 
         // Unpaid draft order today — excluded from revenue
@@ -179,5 +193,50 @@ class ReportsAndMigrationsTest extends TestCase
         foreach ($tables as $table) {
             $this->assertTrue(Schema::hasTable($table), "Expected table '{$table}' to exist after re-migrate.");
         }
+    }
+
+    public function test_tables_index_avoids_n_plus_one_queries_for_occupied_tables(): void
+    {
+        $waiter = User::factory()->waiter()->create();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $table = Table::query()->create([
+                'table_number' => sprintf('T-%02d', $i),
+                'capacity' => 4,
+                'status' => Table::STATUS_OCCUPIED,
+            ]);
+
+            $order = Order::query()->create([
+                'order_ref' => 'ORD-'.(1100 + $i),
+                'table_id' => $table->id,
+                'user_id' => $waiter->id,
+                'status' => Order::STATUS_PENDING,
+                'payment_status' => Order::PAYMENT_PAID,
+                'total' => 250.00,
+                'paid_at' => now(),
+            ]);
+
+            $table->update([
+                'active_order_id' => $order->id,
+                'active_order_ref' => $order->order_ref,
+            ]);
+        }
+
+        Sanctum::actingAs($waiter);
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        $this->getJson('/api/tables')
+            ->assertOk()
+            ->assertJsonCount(5)
+            ->assertJsonPath('0.active_order.table_number', 'T-01')
+            ->assertJsonPath('0.active_order.server_name', $waiter->name);
+
+        $queryCount = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        // Constant query count: tables + activeOrder + activeOrder.table + activeOrder.user (4 queries, not 2 + 2N = 12+)
+        $this->assertLessThanOrEqual(5, $queryCount, "Expected constant eager-loaded queries on GET /api/tables, got {$queryCount}.");
     }
 }

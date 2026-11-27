@@ -31,7 +31,13 @@ class ReportController extends Controller
 
         $cancelledCount = Order::query()
             ->where('status', Order::STATUS_CANCELLED)
-            ->whereBetween('updated_at', [$start, $end])
+            ->where(function ($query) use ($start, $end): void {
+                $query->whereBetween('cancelled_at', [$start, $end])
+                    ->orWhere(function ($legacyQuery) use ($start, $end): void {
+                        $legacyQuery->whereNull('cancelled_at')
+                            ->whereBetween('updated_at', [$start, $end]);
+                    });
+            })
             ->count();
 
         $totalSalesCents = 0;
@@ -120,8 +126,12 @@ class ReportController extends Controller
             ->where('status', '!=', Order::STATUS_CANCELLED)
             ->whereBetween('paid_at', [$start, $end]);
 
-        $paidOrdersToday = (clone $paidTodayQuery)->count();
-        $todaySales = (float) ((clone $paidTodayQuery)->sum('total') ?? 0);
+        $paidTodayTotals = (clone $paidTodayQuery)->pluck('total');
+        $paidOrdersToday = $paidTodayTotals->count();
+        $todaySalesCents = 0;
+        foreach ($paidTodayTotals as $orderTotal) {
+            $todaySalesCents += (int) round(((float) $orderTotal) * 100);
+        }
 
         $unpaidOrdersCount = Order::query()
             ->where('payment_status', Order::PAYMENT_UNPAID)
@@ -170,7 +180,7 @@ class ReportController extends Controller
         return response()->json([
             'date' => $today,
             'timezone' => $timezone,
-            'today_sales' => number_format($todaySales, 2, '.', ''),
+            'today_sales' => number_format($todaySalesCents / 100, 2, '.', ''),
             'paid_orders_today' => $paidOrdersToday,
             'unpaid_orders_count' => $unpaidOrdersCount,
             'active_orders_count' => $activeOrdersCount,

@@ -4,6 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\MenuItem;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Table;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -164,5 +167,110 @@ class MenuAndUserCrudTest extends TestCase
         $this->deleteJson("/api/menu-items/{$itemId}")->assertOk();
         $this->deleteJson("/api/categories/{$categoryId}")->assertOk();
         $this->assertDatabaseMissing('categories', ['id' => $categoryId]);
+    }
+
+    public function test_admin_update_prevents_self_role_demotion_and_revokes_tokens_on_role_or_password_change(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $staff = User::factory()->waiter()->create(['must_change_password' => false]);
+        $staff->createToken('staff-session');
+
+        Sanctum::actingAs($admin);
+
+        // Admin cannot demote their own role
+        $this->putJson("/api/users/{$admin->id}", ['role' => 'waiter'])
+            ->assertUnprocessable();
+        $this->assertSame(User::ROLE_ADMIN, $admin->fresh()->role);
+
+        // Changing another user's role revokes their active tokens
+        $this->putJson("/api/users/{$staff->id}", ['role' => 'kitchen'])
+            ->assertOk()
+            ->assertJsonPath('role', 'kitchen');
+        $this->assertSame(0, $staff->fresh()->tokens()->count());
+
+        // Overwriting another user's password via PUT revokes tokens and forces password change
+        $staff->createToken('staff-session-2');
+        $this->putJson("/api/users/{$staff->id}", ['password' => 'adminreset123'])
+            ->assertOk()
+            ->assertJsonPath('must_change_password', true);
+        $this->assertSame(0, $staff->fresh()->tokens()->count());
+        $this->assertTrue(Hash::check('adminreset123', $staff->fresh()->password));
+    }
+
+    public function test_category_slug_collisions_return_422_and_menu_images_are_protected(): void
+    {
+        Storage::fake('public');
+
+        $admin = User::factory()->admin()->create();
+        Sanctum::actingAs($admin);
+
+        $cat1 = $this->postJson('/api/categories', ['name' => 'Chef Specials'])
+            ->assertCreated()
+            ->json('id');
+
+        // Distinct name with identical slug returns 422 instead of 500
+        $this->postJson('/api/categories', ['name' => 'Chef-Specials'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('slug');
+
+        $cat2 = $this->postJson('/api/categories', ['name' => 'Drinks'])
+            ->assertCreated()
+            ->json('id');
+
+        $this->putJson("/api/categories/{$cat2}", ['name' => 'Chef_Specials'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('slug');
+
+        // Direct /storage/... string injection is rejected on create
+        $this->postJson('/api/menu-items', [
+            'category_id' => $cat1,
+            'name' => 'Forged Photo Dish',
+            'price' => 150,
+            'image' => '/storage/menu/other-dish.png',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('image');
+
+        // Create item with real uploaded photo
+        $created = $this->post('/api/menu-items', [
+            'category_id' => $cat1,
+            'name' => 'Kare-Kare',
+            'price' => '360.00',
+            'image' => $this->fakePngUpload('karekare.png'),
+        ], ['Accept' => 'application/json'])->assertCreated();
+
+        $itemId = $created->json('id');
+        /** @var MenuItem $menuItem */
+        $menuItem = MenuItem::query()->findOrFail($itemId);
+        $rawPath = $menuItem->getRawImagePath();
+        $resolvedUrl = $created->json('image');
+        $this->assertNotNull($rawPath);
+
+        // Echoing back the item's own resolved image URL during a JSON update succeeds and preserves raw /storage/... path
+        $this->putJson("/api/menu-items/{$itemId}", [
+            'name' => 'Kare-Kare Deluxe',
+            'price' => 380.00,
+            'image' => $resolvedUrl,
+        ])->assertOk();
+        $this->assertSame($rawPath, $menuItem->fresh()->getRawImagePath());
+
+        // Referencing the item in an order blocks deletion with 409 AND preserves the stored image
+        $table = Table::query()->create(['table_number' => 'T-99', 'capacity' => 4, 'status' => Table::STATUS_OCCUPIED]);
+        $order = Order::query()->create([
+            'order_ref' => 'ORD-1999',
+            'table_id' => $table->id,
+            'user_id' => $admin->id,
+            'status' => Order::STATUS_PENDING,
+            'payment_status' => Order::PAYMENT_UNPAID,
+            'total' => 380.00,
+        ]);
+        OrderItem::query()->create([
+            'order_id' => $order->id,
+            'menu_item_id' => $itemId,
+            'unit_price' => 380.00,
+            'quantity' => 1,
+        ]);
+
+        $this->deleteJson("/api/menu-items/{$itemId}")->assertStatus(409);
+        Storage::disk('public')->assertExists(substr($rawPath, strlen('/storage/')));
     }
 }
