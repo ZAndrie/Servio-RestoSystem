@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /tables
+Disallow: /pos
+Disallow: /orders
+Disallow: /payment
+Disallow: /kitchen
+Disallow: /admin/

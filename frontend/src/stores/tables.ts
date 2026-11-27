@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import type { DiningTable } from '@/types'
 import { tableService } from '@/services/tableService'
+import { useToastStore } from './toast'
 
 interface TablesState {
   tables: DiningTable[]
@@ -59,12 +60,20 @@ export const useTablesStore = defineStore('tables', {
 
     occupyTable(tableId: number, orderId: number, orderRef: string) {
       const table = this.tables.find((t) => t.id === tableId)
+      const prevStatus = table?.status
       if (table) {
         table.status = 'occupied'
         table.active_order_id = orderId
         table.active_order_ref = orderRef
       }
-      tableService.occupyTable(tableId, orderId, orderRef).catch(() => {})
+      tableService.occupyTable(tableId, orderId, orderRef).catch((err: unknown) => {
+        if (table && prevStatus) table.status = prevStatus
+        const toastStore = useToastStore()
+        toastStore.error(
+          'Table sync warning',
+          (err as Error)?.message || 'Could not update table status on server.',
+        )
+      })
     },
 
     markTableAvailableLocally(tableId: number) {

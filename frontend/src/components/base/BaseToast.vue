@@ -1,7 +1,7 @@
 <template>
   <div
     class="fixed z-[1200] right-4 left-4 sm:left-auto sm:w-96 flex flex-col gap-2 pointer-events-none safe-pb-bar no-print"
-    :class="isPosRoute ? 'bottom-[136px] lg:bottom-5' : 'bottom-20 md:bottom-5'"
+    :class="isPosRoute ? 'bottom-[136px] md:bottom-auto md:top-5' : 'bottom-20 md:bottom-auto md:top-5'"
     aria-label="Notifications"
   >
     <TransitionGroup name="servio-toast">
@@ -45,11 +45,11 @@
 
             <button
               type="button"
-              class="touch-extend-44 w-8 h-8 rounded-[var(--radius-pill)] flex items-center justify-center text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-alt)] transition-ui cursor-pointer"
+              class="touch-extend-44 w-10 h-10 rounded-[var(--radius-pill)] flex items-center justify-center text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-alt)] transition-ui cursor-pointer"
               aria-label="Dismiss notification"
               @click="toastStore.remove(toast.id)"
             >
-              <BaseIcon name="x" :size="15" />
+              <BaseIcon name="x" :size="16" />
             </button>
           </div>
         </div>

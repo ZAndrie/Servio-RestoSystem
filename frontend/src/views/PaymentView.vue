@@ -1,27 +1,27 @@
 <template>
   <main class="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-6xl w-full mx-auto space-y-6">
-    <!-- Header with 3-Step Pay-First Flow Indicator -->
+    <!-- Header with Clean Typographic Step Rail -->
     <header class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
       <div class="space-y-2">
-        <div class="flex flex-wrap items-center gap-2 text-sm font-semibold">
+        <div class="flex flex-wrap items-center gap-1.5 text-sm">
           <button
             type="button"
-            class="min-h-[44px] px-3.5 rounded-[var(--radius-pill)] bg-[var(--color-surface)] border border-[var(--color-line)] hover:border-[var(--color-line-strong)] text-[var(--color-ink)] inline-flex items-center gap-1.5 transition-ui cursor-pointer"
+            class="min-h-[44px] -ml-2 px-2.5 rounded-[var(--radius-input)] text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-alt)] font-semibold inline-flex items-center transition-ui cursor-pointer"
             @click="router.push('/tables')"
           >
             <span>1. Tables</span>
           </button>
-          <BaseIcon name="chevron-right" :size="14" custom-class="text-[var(--color-muted)]" />
+          <span class="text-[var(--color-line-strong)] font-mono" aria-hidden="true">/</span>
           <button
             type="button"
-            class="min-h-[44px] px-3.5 rounded-[var(--radius-pill)] bg-[var(--color-surface)] border border-[var(--color-line)] hover:border-[var(--color-line-strong)] text-[var(--color-ink)] inline-flex items-center gap-1.5 transition-ui cursor-pointer"
+            class="min-h-[44px] px-2.5 rounded-[var(--radius-input)] text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-alt)] font-semibold inline-flex items-center transition-ui cursor-pointer"
             @click="goBackToTakeOrder"
           >
             <span>2. Take Order</span>
           </button>
-          <BaseIcon name="chevron-right" :size="14" custom-class="text-[var(--color-muted)]" />
-          <span class="px-3.5 py-2 rounded-[var(--radius-pill)] bg-[var(--color-accent)] text-[var(--color-surface)] font-bold">
-            3. Pay & Send to Kitchen
+          <span class="text-[var(--color-line-strong)] font-mono" aria-hidden="true">/</span>
+          <span class="px-2.5 py-1 rounded-[var(--radius-input)] bg-[var(--color-accent-subtle)] text-[var(--color-accent)] font-bold">
+            3. Pay &amp; Send to Kitchen
           </span>
         </div>
 
@@ -103,7 +103,11 @@
                     {{ formatCurrency(order.total) }}
                   </p>
                   <p class="text-xs text-[var(--color-muted)] tabular-nums">
-                    {{ order.items.reduce((s, i) => s + i.quantity, 0) }} items
+                    {{
+                      order.items.reduce((s, i) => s + i.quantity, 0) === 1
+                        ? '1 item'
+                        : `${order.items.reduce((s, i) => s + i.quantity, 0)} items`
+                    }}
                   </p>
                 </div>
               </button>
@@ -204,15 +208,23 @@
               <li
                 v-for="(item, idx) in selectedOrder.items"
                 :key="`${item.menu_item_id}-${idx}`"
-                class="py-2.5 flex items-baseline justify-between gap-3 text-base"
+                class="py-2.5 space-y-1 text-base"
               >
-                <span class="min-w-0 truncate text-[var(--color-ink)]">
-                  <strong class="tabular-nums text-[var(--color-accent)] mr-2">{{ item.quantity }}×</strong>
-                  {{ item.name }}
-                </span>
-                <span class="tabular-nums font-semibold text-[var(--color-ink)] text-right shrink-0">
-                  {{ formatCurrency(item.unit_price * item.quantity) }}
-                </span>
+                <div class="flex items-baseline justify-between gap-3">
+                  <span class="min-w-0 truncate text-[var(--color-ink)]">
+                    <strong class="tabular-nums text-[var(--color-accent)] mr-2">{{ item.quantity }}×</strong>
+                    {{ item.name }}
+                  </span>
+                  <span class="tabular-nums font-semibold text-[var(--color-ink)] text-right shrink-0">
+                    {{ formatCurrency(item.unit_price * item.quantity) }}
+                  </span>
+                </div>
+                <p
+                  v-if="item.notes"
+                  class="ml-7 px-2.5 py-1 rounded-[var(--radius-input)] bg-[var(--color-honey-bg)] text-[var(--color-honey-ink)] text-xs font-semibold inline-block"
+                >
+                  Note: {{ item.notes }}
+                </p>
               </li>
             </ul>
 
@@ -385,7 +397,7 @@ import { useOrdersStore } from '@/stores/orders'
 import { useTablesStore } from '@/stores/tables'
 import { useAuthStore } from '@/stores/auth'
 import { useCartStore } from '@/stores/cart'
-import { formatCurrency } from '@/utils/format'
+import { formatCurrency, formatTableLabel } from '@/utils/format'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseDialog from '@/components/base/BaseDialog.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
@@ -410,10 +422,7 @@ const paymentMethods: { value: PaymentMethod; label: string; icon: string }[] = 
   { value: 'card', label: 'Card', icon: 'credit-card' },
 ]
 
-const friendlyTableName = (tableNumber: string) => {
-  const num = Number((tableNumber || '').replace(/\D/g, ''))
-  return Number.isFinite(num) && num > 0 ? `Table ${num}` : tableNumber
-}
+const friendlyTableName = formatTableLabel
 
 const unpaidOrders = computed(() => ordersStore.unpaidOrders)
 

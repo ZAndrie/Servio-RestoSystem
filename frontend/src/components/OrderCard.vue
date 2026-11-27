@@ -153,7 +153,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type { Order } from '@/types'
 import { useTicker } from '@/composables/useTicker'
-import { formatCurrency, formatElapsedClock, getElapsedMinutes } from '@/utils/format'
+import { formatCurrency, formatElapsedClock, formatTableLabel, getElapsedMinutes } from '@/utils/format'
 import StatusBadge from '@/components/base/StatusBadge.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 
@@ -173,10 +173,7 @@ const showAllItems = ref(false)
 onMounted(start)
 onUnmounted(stop)
 
-const friendlyTable = computed(() => {
-  const num = Number((props.order.table_number || '').replace(/\D/g, ''))
-  return Number.isFinite(num) && num > 0 ? `Table ${num}` : props.order.table_number
-})
+const friendlyTable = computed(() => formatTableLabel(props.order.table_number))
 
 const elapsedClock = computed(() => formatElapsedClock(props.order.created_at, now.value))
 

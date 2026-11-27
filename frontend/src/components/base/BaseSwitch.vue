@@ -10,6 +10,8 @@
     <button
       v-bind="attrs"
       type="button"
+      :aria-label="ariaLabel || (!label && !ariaLabelledby ? 'Toggle setting' : undefined)"
+      :aria-labelledby="ariaLabelledby"
       class="touch-extend-44 inline-flex items-center gap-2.5 group focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] rounded-[var(--radius-pill)]"
       :class="isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'"
     >
@@ -44,10 +46,14 @@ withDefaults(
   defineProps<{
     modelValue: boolean
     label?: string
+    ariaLabel?: string
+    ariaLabelledby?: string
     disabled?: boolean
   }>(),
   {
     label: '',
+    ariaLabel: undefined,
+    ariaLabelledby: undefined,
     disabled: false,
   },
 )

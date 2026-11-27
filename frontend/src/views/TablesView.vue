@@ -1,20 +1,19 @@
 <template>
   <main class="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-6xl w-full mx-auto space-y-6">
-    <!-- Friendly 2-Step Guide + Greeting -->
+    <!-- Clean Typographic Step Rail + Greeting -->
     <header class="flex flex-col md:flex-row md:items-end justify-between gap-4">
       <div class="space-y-2">
-        <!-- Simple visual 3-step Pay-First flow indicator -->
-        <div class="flex flex-wrap items-center gap-2 text-sm font-semibold">
-          <span class="px-3.5 py-1.5 rounded-[var(--radius-pill)] bg-[var(--color-accent)] text-[var(--color-surface)] font-bold">
+        <div class="flex flex-wrap items-center gap-1.5 text-sm">
+          <span class="px-2.5 py-1 rounded-[var(--radius-input)] bg-[var(--color-accent-subtle)] text-[var(--color-accent)] font-bold">
             1. Choose a Table
           </span>
-          <BaseIcon name="chevron-right" :size="14" custom-class="text-[var(--color-muted)]" />
-          <span class="px-3.5 py-1.5 rounded-[var(--radius-pill)] bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-muted)]">
+          <span class="text-[var(--color-line-strong)] font-mono" aria-hidden="true">/</span>
+          <span class="px-1 text-[var(--color-muted)] font-medium">
             2. Take Order
           </span>
-          <BaseIcon name="chevron-right" :size="14" custom-class="text-[var(--color-muted)]" />
-          <span class="px-3.5 py-1.5 rounded-[var(--radius-pill)] bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-muted)]">
-            3. Pay & Send to Kitchen
+          <span class="text-[var(--color-line-strong)] font-mono" aria-hidden="true">/</span>
+          <span class="px-1 text-[var(--color-muted)] font-medium">
+            3. Pay &amp; Send to Kitchen
           </span>
         </div>
 
@@ -26,17 +25,17 @@
         </p>
       </div>
 
-      <!-- At-a-Glance Floor Legend -->
-      <div class="flex flex-wrap items-center gap-2.5 shrink-0">
-        <div class="px-4 py-2.5 rounded-[var(--radius-card)] bg-[var(--color-leaf-bg)] border border-[var(--color-leaf)]/45 flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-[var(--color-leaf)]" aria-hidden="true" />
-          <span class="text-base font-bold tabular-nums text-[var(--color-leaf-ink)]">
+      <!-- Quiet Hairline Floor Summary (Replaces bulky colored legend boxes) -->
+      <div class="inline-flex items-center rounded-[var(--radius-input)] bg-[var(--color-surface)] border border-[var(--color-line)] divide-x divide-[var(--color-line)] shrink-0">
+        <div class="px-3.5 py-2 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-[var(--color-leaf)]" aria-hidden="true" />
+          <span class="text-sm font-bold tabular-nums text-[var(--color-ink)]">
             {{ availableCount }} Available
           </span>
         </div>
-        <div class="px-4 py-2.5 rounded-[var(--radius-card)] bg-[var(--color-pot-bg)] border border-[var(--color-pot)]/45 flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-[var(--color-pot)]" aria-hidden="true" />
-          <span class="text-base font-bold tabular-nums text-[var(--color-pot-ink)]">
+        <div class="px-3.5 py-2 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-[var(--color-pot)]" aria-hidden="true" />
+          <span class="text-sm font-bold tabular-nums text-[var(--color-ink)]">
             {{ occupiedCount }} Occupied
           </span>
         </div>
@@ -50,7 +49,7 @@
       class="rounded-[var(--radius-card)] bg-[var(--color-leaf-bg)] border border-[var(--color-leaf)]/50 px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
     >
       <div class="flex items-center gap-3">
-        <span class="w-10 h-10 rounded-[var(--radius-pill)] bg-[var(--color-surface)] text-[var(--color-leaf-ink)] flex items-center justify-center shrink-0">
+        <span class="w-10 h-10 rounded-[var(--radius-input)] bg-[var(--color-surface)] border border-[var(--color-leaf)]/30 text-[var(--color-leaf-ink)] flex items-center justify-center shrink-0">
           <BaseIcon name="cloche" :size="20" custom-class="optical-cloche" />
         </span>
         <div>
@@ -68,19 +67,18 @@
       </BaseButton>
     </section>
 
-    <!-- Quick Filter Chips -->
-    <div class="flex items-center gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Filter tables">
+    <!-- Quick Rectangular Filter Tabs -->
+    <div class="flex items-center gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Filter tables">
       <button
         v-for="tab in filterTabs"
         :key="tab.value"
         type="button"
-        role="tab"
-        :aria-selected="statusFilter === tab.value"
-        class="min-h-[44px] px-5 rounded-[var(--radius-pill)] text-base font-semibold transition-ui whitespace-nowrap cursor-pointer shrink-0"
+        :aria-pressed="statusFilter === tab.value"
+        class="min-h-[44px] px-4 rounded-[var(--radius-input)] text-sm font-semibold transition-ui whitespace-nowrap cursor-pointer shrink-0 border"
         :class="
           statusFilter === tab.value
-            ? 'bg-[var(--color-ink)] text-[var(--color-surface)]'
-            : 'bg-[var(--color-surface)] text-[var(--color-ink)] border border-[var(--color-line)] hover:border-[var(--color-line-strong)]'
+            ? 'bg-[var(--color-ink)] text-[var(--color-surface)] border-[var(--color-ink)]'
+            : 'bg-[var(--color-surface)] text-[var(--color-ink)] border-[var(--color-line)] hover:border-[var(--color-line-strong)]'
         "
         @click="statusFilter = tab.value"
       >
@@ -265,14 +263,19 @@
               {{ ord.payment_status === 'unpaid' ? 'Unpaid' : friendlyOrderStatus(ord) }}
             </span>
           </div>
-          <ul class="space-y-1 text-base text-[var(--color-ink)]">
+          <ul class="space-y-1.5 text-base text-[var(--color-ink)]">
             <li
               v-for="(item, idx) in ord.items"
               :key="`${item.menu_item_id}-${idx}`"
-              class="flex justify-between gap-2"
+              class="space-y-0.5"
             >
-              <span class="truncate">{{ item.quantity }}× {{ item.name }}</span>
-              <span class="tabular-nums font-semibold shrink-0">{{ formatCurrency(item.unit_price * item.quantity) }}</span>
+              <div class="flex justify-between gap-2">
+                <span class="truncate">{{ item.quantity }}× {{ item.name }}</span>
+                <span class="tabular-nums font-semibold shrink-0">{{ formatCurrency(item.unit_price * item.quantity) }}</span>
+              </div>
+              <p v-if="item.notes" class="text-xs text-[var(--color-honey-ink)] bg-[var(--color-honey-bg)] px-2 py-0.5 rounded-[6px] inline-block">
+                Note: {{ item.notes }}
+              </p>
             </li>
           </ul>
         </div>
@@ -386,7 +389,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useTablesStore } from '@/stores/tables'
 import { useOrdersStore } from '@/stores/orders'
 import { useCartStore } from '@/stores/cart'
-import { formatCurrency, getManilaGreeting } from '@/utils/format'
+import { formatCurrency, formatTableLabel, getManilaGreeting } from '@/utils/format'
 import { executeViewTransition } from '@/utils/transition'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseDialog from '@/components/base/BaseDialog.vue'
@@ -462,10 +465,7 @@ const filteredTables = computed(() => {
 
 const readyOrders = computed(() => ordersStore.kdsReadyOrders)
 
-const friendlyTableName = (tableNumber: string) => {
-  const num = Number(tableNumber.replace(/\D/g, ''))
-  return Number.isFinite(num) && num > 0 ? `Table ${num}` : tableNumber
-}
+const friendlyTableName = formatTableLabel
 
 const readyBannerText = computed(() => {
   if (readyOrders.value.length === 1) {

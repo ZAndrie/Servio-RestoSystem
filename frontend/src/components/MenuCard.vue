@@ -1,18 +1,17 @@
 <template>
-  <!-- Entire available card adds 1 directly to the order on tap — zero annoying detail popup -->
+  <!-- Entire available card adds 1 directly to the order on tap — crisp, instant response -->
   <button
     type="button"
     :disabled="!item.is_available"
     :aria-label="item.is_available ? `Add ${item.name} to order` : `${item.name} is sold out`"
-    class="menu-card-stagger group text-left flex flex-col rounded-[var(--radius-card)] bg-[var(--color-surface)] border overflow-hidden transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+    class="group text-left flex flex-col rounded-[var(--radius-card)] bg-[var(--color-surface)] border overflow-hidden transition-ui focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
     :class="[
       !item.is_available
-        ? 'border-[var(--color-line)] opacity-70 cursor-not-allowed'
+        ? 'border-[var(--color-line)] opacity-65 cursor-not-allowed'
         : cartQty > 0
           ? 'border-[var(--color-accent)] cursor-pointer active:translate-y-px'
           : 'border-[var(--color-line)] hover:border-[var(--color-line-strong)] cursor-pointer active:translate-y-px',
     ]"
-    :style="{ '--stagger-delay': `${staggerDelayMs}ms` }"
     @click="onTapAdd"
   >
     <div class="relative w-full overflow-hidden">
@@ -23,36 +22,33 @@
         :desaturated="!item.is_available"
       />
 
-      <!-- Popular Badge -->
-      <span
-        v-if="item.is_popular && item.is_available"
-        class="absolute top-3 left-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-[var(--radius-pill)] bg-[var(--color-surface)]/95 border border-[var(--color-accent-soft)] text-[var(--color-accent)] label-tracked"
-      >
-        <BaseIcon name="star" :size="12" custom-class="optical-dot" />
-        <span>Popular</span>
-      </span>
-
-      <!-- Sold Out Badge -->
+      <!-- Clean Architectural Tag (No bubbly capsule badges floating over food) -->
       <span
         v-if="!item.is_available"
-        class="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-pill)] bg-[var(--color-surface)]/95 border border-[var(--color-line-strong)] text-[var(--color-muted)] label-tracked"
+        class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-[var(--radius-input)] bg-[var(--color-ink)] text-[var(--color-surface)] font-mono text-[11px] font-semibold uppercase tracking-[0.04em]"
       >
         Sold out
       </span>
+      <span
+        v-else-if="item.is_popular"
+        class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-[var(--radius-input)] bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-ink)] font-mono text-[11px] font-semibold tracking-[0.02em]"
+      >
+        House favorite
+      </span>
 
-      <!-- Live Quantity in Order Badge -->
+      <!-- Live Quantity in Order Counter -->
       <span
         v-if="cartQty > 0"
-        class="absolute top-3 right-3 min-w-[28px] h-[28px] px-2 rounded-[var(--radius-pill)] bg-[var(--color-accent)] text-[var(--color-surface)] text-sm font-bold tabular-nums inline-flex items-center justify-center"
+        class="absolute top-2.5 right-2.5 min-w-[26px] h-[26px] px-2 rounded-[var(--radius-input)] bg-[var(--color-accent)] text-[var(--color-surface)] font-mono text-xs font-bold tabular-nums inline-flex items-center justify-center"
       >
         {{ cartQty }}
       </span>
     </div>
 
-    <!-- Clean, Scannable Footer: Dish Name + Price + Tactile "+" Indicator -->
-    <div class="p-4 flex-1 flex flex-col justify-between gap-3 w-full">
+    <!-- Clean, Scannable Footer: Dish Name + Price + Crisp Tactile "+" -->
+    <div class="p-3.5 flex-1 flex flex-col justify-between gap-3 w-full">
       <h3
-        class="font-display text-lg font-bold text-[var(--color-ink)] leading-heading"
+        class="font-display text-base font-bold text-[var(--color-ink)] leading-heading"
         :class="{ 'text-[var(--color-muted)]': !item.is_available }"
       >
         {{ item.name }}
@@ -67,15 +63,17 @@
         </span>
 
         <span
-          class="w-9 h-9 rounded-[var(--radius-pill)] flex items-center justify-center transition-ui shrink-0"
+          class="w-9 h-9 rounded-[var(--radius-input)] flex items-center justify-center transition-ui shrink-0 border"
           :class="
             item.is_available
-              ? 'bg-[var(--color-accent)] group-hover:bg-[var(--color-accent-hover)] text-[var(--color-surface)]'
-              : 'bg-[var(--color-surface-alt)] text-[var(--color-muted)] border border-[var(--color-line)]'
+              ? cartQty > 0
+                ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[var(--color-surface)]'
+                : 'bg-[var(--color-surface-alt)] border-[var(--color-line)] text-[var(--color-ink)] group-hover:bg-[var(--color-accent)] group-hover:border-[var(--color-accent)] group-hover:text-[var(--color-surface)]'
+              : 'bg-[var(--color-surface-alt)] text-[var(--color-muted)] border-[var(--color-line)]'
           "
           aria-hidden="true"
         >
-          <BaseIcon name="plus" :size="18" custom-class="optical-plus" />
+          <BaseIcon name="plus" :size="17" custom-class="optical-plus" />
         </span>
       </div>
     </div>
@@ -83,7 +81,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import type { MenuItem } from '@/types'
 import { formatCurrency } from '@/utils/format'
 import DishArtwork from '@/components/base/DishArtwork.vue'
@@ -104,8 +101,6 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: 'add', payload: { item: MenuItem; originX: number; originY: number }): void
 }>()
-
-const staggerDelayMs = computed(() => Math.min(props.index * 30, 260))
 
 const onTapAdd = (event: MouseEvent) => {
   if (!props.item.is_available) return

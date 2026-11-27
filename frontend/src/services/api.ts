@@ -1,6 +1,9 @@
 import axios from 'axios'
 
-export const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
+// Fail-closed in production builds: mock mode is active by default ONLY in Vite dev unless explicitly opted in
+export const USE_MOCK = import.meta.env.DEV
+  ? import.meta.env.VITE_USE_MOCK !== 'false'
+  : import.meta.env.VITE_USE_MOCK === 'true'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
 

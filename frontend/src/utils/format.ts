@@ -13,6 +13,13 @@ export const formatCurrency = (amount: number): string => {
   return phCurrencyFormatter.format(Number.isFinite(amount) ? amount : 0)
 }
 
+export const formatTableLabel = (tableNumber?: string | null): string => {
+  const raw = (tableNumber || '').trim()
+  if (!raw) return 'Table'
+  const num = Number(raw.replace(/\D/g, ''))
+  return Number.isFinite(num) && num > 0 ? `Table ${num}` : raw
+}
+
 export const getManilaHour = (date: Date = new Date()): number => {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Manila',

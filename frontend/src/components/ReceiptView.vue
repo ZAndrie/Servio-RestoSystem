@@ -49,6 +49,9 @@
           <div v-if="item.quantity > 1" class="text-[var(--color-muted)] pl-3">
             @ {{ formatCurrency(item.unit_price) }} each
           </div>
+          <div v-if="item.notes" class="text-[var(--color-muted)] pl-3 italic">
+            Note: {{ item.notes }}
+          </div>
         </div>
       </div>
 

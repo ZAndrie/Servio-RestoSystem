@@ -5,6 +5,10 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [Vue(), tailwindcss()],
+  optimizeDeps: {
+    // Only scan the real app entry so any stray HTML files in public/ never break dep-scan
+    entries: ['index.html'],
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('src', import.meta.url)),

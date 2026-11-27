@@ -168,9 +168,9 @@ export const orderService = {
       return JSON.parse(JSON.stringify(order))
     }
 
+    // Server derives cancelled_by strictly from the authenticated Sanctum token user
     const res = await api.post(`/orders/${orderId}/cancel`, {
       reason,
-      cancelled_by: cancelledByUserId,
     })
     return normalizeOrder(res.data)
   },

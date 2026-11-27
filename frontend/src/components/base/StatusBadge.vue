@@ -1,6 +1,6 @@
 <template>
   <span
-    class="inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] label-tracked border whitespace-nowrap select-none"
+    class="inline-flex items-center gap-1.5 rounded-[var(--radius-input)] label-tracked border whitespace-nowrap select-none"
     :class="[sizeClass, toneClass]"
   >
     <BaseIcon :name="config.icon" :size="compact ? 12 : 14" custom-class="optical-dot shrink-0" />

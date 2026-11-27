@@ -38,32 +38,31 @@
 
       <button
         type="button"
-        class="min-h-[44px] px-4 rounded-[var(--radius-pill)] bg-[var(--color-leaf-ink)] text-[var(--color-surface)] text-sm font-semibold transition-ui hover:opacity-90 cursor-pointer shrink-0"
+        class="min-h-[44px] px-4 rounded-[var(--radius-input)] bg-[var(--color-leaf-ink)] text-[var(--color-surface)] text-sm font-semibold transition-ui hover:opacity-90 cursor-pointer shrink-0"
         @click="activeFilter = 'ready'"
       >
         Show ready ({{ ordersStore.kdsReadyOrders.length }})
       </button>
     </section>
 
-    <!-- Filter Chips (44px high, 8px gap) -->
-    <div class="flex items-center gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Filter active orders">
+    <!-- Filter Tabs (Crisp 6px architectural controls) -->
+    <div class="flex items-center gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Filter active orders">
       <button
         v-for="tab in filterTabs"
         :key="tab.value"
         type="button"
-        role="tab"
-        :aria-selected="activeFilter === tab.value"
-        class="min-h-[44px] px-4 rounded-[var(--radius-pill)] text-base font-medium transition-ui inline-flex items-center gap-2 whitespace-nowrap cursor-pointer shrink-0"
+        :aria-pressed="activeFilter === tab.value"
+        class="min-h-[44px] px-4 rounded-[var(--radius-input)] text-sm font-semibold transition-ui inline-flex items-center gap-2 whitespace-nowrap cursor-pointer shrink-0 border"
         :class="
           activeFilter === tab.value
-            ? 'bg-[var(--color-ink)] text-[var(--color-surface)] font-semibold'
-            : 'bg-[var(--color-surface)] text-[var(--color-ink)] border border-[var(--color-line)] hover:border-[var(--color-line-strong)]'
+            ? 'bg-[var(--color-ink)] text-[var(--color-surface)] border-[var(--color-ink)]'
+            : 'bg-[var(--color-surface)] text-[var(--color-ink)] border-[var(--color-line)] hover:border-[var(--color-line-strong)]'
         "
         @click="activeFilter = tab.value"
       >
         <span>{{ tab.label }}</span>
         <span
-          class="text-xs font-mono tabular-nums px-2 py-0.5 rounded-[var(--radius-pill)]"
+          class="text-xs font-mono tabular-nums px-1.5 py-0.5 rounded-[var(--radius-input)]"
           :class="
             activeFilter === tab.value
               ? 'bg-[var(--color-surface)]/20 text-[var(--color-surface)]'

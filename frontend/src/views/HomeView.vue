@@ -1,494 +1,552 @@
 <template>
-  <div class="min-h-[100dvh] bg-[var(--color-bg)] text-[var(--color-ink)] selection:bg-[var(--color-accent-soft)] selection:text-[var(--color-ink)] relative overflow-x-clip">
-    <!-- Subtle organic leaf accents (calm, low-contrast, zero visual noise) -->
-    <svg
-      class="pointer-events-none select-none fixed -top-24 -right-24 w-[460px] h-[460px] text-[var(--color-leaf)] opacity-[0.06] blur-[3px] z-0"
-      viewBox="0 0 240 240"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M210 30C125 35 60 85 40 190c95-15 160-72 170-160Z" />
-    </svg>
-    <svg
-      class="pointer-events-none select-none fixed top-[48%] -left-32 w-[400px] h-[400px] text-[var(--color-pot)] opacity-[0.04] blur-[4px] z-0"
-      viewBox="0 0 240 240"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M30 210c5-85 55-150 160-170-15 95-72 160-160 170Z" />
-    </svg>
+  <div class="servio-site min-h-[100dvh] flex flex-col bg-[var(--color-bg)] text-[var(--color-ink)]">
+    <HomeHeader :section-links="sectionLinks" :modules="systemExploreCards" />
 
-    <!-- Fixed Top Navigation Bar -->
-    <header class="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-[var(--color-surface)]/95 border-b border-[var(--color-line)]">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between gap-4">
-        <!-- Logo & Brand Name -->
-        <router-link
-          to="/"
-          class="flex items-center gap-3 group focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] rounded-[var(--radius-input)] p-1"
-        >
-          <img
-            src="/servio-logo-icon.jpg"
-            alt="Servio Logo"
-            width="40"
-            height="40"
-            class="w-10 h-10 rounded-[var(--radius-input)] object-cover border border-[var(--color-line)] group-hover:border-[var(--color-accent)] transition-ui"
-          />
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="servio-wordmark text-xl text-[var(--color-ink)] leading-none">
-                Servio
-              </span>
-              <span class="hidden sm:inline-flex px-2.5 py-0.5 rounded-[var(--radius-pill)] label-tracked bg-[var(--color-accent-subtle)] text-[var(--color-accent)] border border-[var(--color-accent-soft)]">
-                Restaurant OS
-              </span>
-            </div>
-            <p class="hidden sm:block text-xs text-[var(--color-muted)] font-medium leading-tight mt-0.5">
-              Order Management System for Restaurant Owners
+    <!-- Fixed Masthead Offset -->
+    <div class="h-[68px] sm:h-[72px] shrink-0" aria-hidden="true" />
+
+    <main id="main-content" tabindex="-1" class="flex-1 focus:outline-none">
+      <!-- 1. ASYMMETRIC EDITORIAL HERO — REAL HOSPITALITY LEDGER, ZERO AI PILL BADGES -->
+      <section class="pt-10 sm:pt-14 lg:pt-16 pb-14 sm:pb-18">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+          <!-- Left Editorial Column -->
+          <div class="lg:col-span-7 space-y-6 lg:pt-3">
+            <p class="site-mono-index text-[var(--color-accent)] border-l-2 border-[var(--color-accent)] pl-3">
+              Pay First, Dine After · Local LAN Restaurant System
             </p>
-          </div>
-        </router-link>
 
-        <!-- Desktop Navigation Links -->
-        <nav class="hidden md:flex items-center gap-1 text-sm font-semibold" aria-label="Main Navigation">
-          <a
-            href="#modules"
-            class="min-h-[44px] inline-flex items-center px-3.5 rounded-[var(--radius-pill)] text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-alt)] transition-ui"
-          >
-            How It Works
-          </a>
-          <a
-            href="#owner-controls"
-            class="min-h-[44px] inline-flex items-center px-3.5 rounded-[var(--radius-pill)] text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-alt)] transition-ui"
-          >
-            Owner Tools
-          </a>
-          <a
-            href="#stations"
-            class="min-h-[44px] inline-flex items-center px-3.5 rounded-[var(--radius-pill)] text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-alt)] transition-ui"
-          >
-            Staff Stations
-          </a>
-          <a
-            href="#architecture"
-            class="min-h-[44px] inline-flex items-center px-3.5 rounded-[var(--radius-pill)] text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-alt)] transition-ui"
-          >
-            Why Servio
-          </a>
-        </nav>
-
-        <!-- Right Action: Workspace Switcher or Sign In + Mobile Menu Toggle -->
-        <div class="flex items-center gap-2">
-          <template v-if="authStore.isAuthenticated">
-            <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-pill)] bg-[var(--color-surface-alt)] border border-[var(--color-line)] text-xs font-semibold text-[var(--color-ink)]">
-              <span class="w-2 h-2 rounded-full bg-[var(--color-leaf)]" aria-hidden="true" />
-              <span>{{ authStore.user?.name }}</span>
-              <span class="text-[var(--color-muted)] capitalize">({{ authStore.role }})</span>
-            </div>
-
-            <BaseButton
-              variant="primary"
-              size="sm"
-              trailing-icon="chevron-right"
-              @click="goToWorkspace"
-            >
-              Open {{ workspaceLabel }}
-            </BaseButton>
-
-            <button
-              type="button"
-              class="min-w-[44px] min-h-[44px] px-2.5 rounded-[var(--radius-pill)] flex items-center justify-center text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-alt)] transition-ui cursor-pointer"
-              title="Sign out"
-              aria-label="Sign out"
-              @click="handleLogout"
-            >
-              <BaseIcon name="logout" :size="18" />
-            </button>
-          </template>
-
-          <template v-else>
-            <router-link
-              to="/login"
-              class="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 sm:px-5 rounded-[var(--radius-pill)] bg-[var(--color-accent)] text-[var(--color-surface)] text-sm font-semibold hover:bg-[var(--color-accent-hover)] active:translate-y-px transition-ui"
-            >
-              <BaseIcon name="user" :size="16" />
-              <span class="hidden sm:inline">Owner &amp; Staff Sign In</span>
-              <span class="sm:hidden">Sign In</span>
-            </router-link>
-          </template>
-
-          <!-- Mobile (< 768px) section menu toggle -->
-          <button
-            type="button"
-            class="md:hidden min-w-[44px] min-h-[44px] rounded-[var(--radius-pill)] border border-[var(--color-line)] bg-[var(--color-bg)] flex items-center justify-center text-[var(--color-ink)] transition-ui cursor-pointer"
-            :aria-expanded="isMobileNavOpen"
-            aria-label="Toggle section menu"
-            @click="isMobileNavOpen = !isMobileNavOpen"
-          >
-            <BaseIcon :name="isMobileNavOpen ? 'x' : 'chevron-down'" :size="18" />
-          </button>
-        </div>
-      </div>
-
-      <!-- Mobile Dropdown Navigation -->
-      <nav
-        v-if="isMobileNavOpen"
-        aria-label="Mobile sections"
-        class="md:hidden border-t border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 grid grid-cols-2 gap-2"
-      >
-        <a
-          v-for="link in navLinks"
-          :key="link.href"
-          :href="link.href"
-          class="min-h-[44px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] inline-flex items-center justify-center text-sm font-semibold text-[var(--color-ink)]"
-          @click="isMobileNavOpen = false"
-        >
-          {{ link.label }}
-        </a>
-      </nav>
-    </header>
-
-    <!-- Fixed Header Offset -->
-    <div class="h-[72px]" aria-hidden="true" />
-
-    <main class="relative z-10">
-      <!-- HERO SECTION -->
-      <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-14 lg:pt-16 lg:pb-20">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-          <div class="lg:col-span-7 space-y-6">
-            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-[var(--radius-pill)] bg-[var(--color-surface)] border border-[var(--color-line)] text-xs font-bold text-[var(--color-accent)] label-tracked">
-              <BaseIcon name="cloche" :size="14" custom-class="optical-cloche" />
-              <span>Pay First, Dine After · Offline LAN Ready</span>
-            </div>
-
-            <h1 class="font-display text-2xl sm:text-[38px] font-bold text-[var(--color-ink)] leading-[1.14] tracking-[-0.02em] text-balance">
-              Run your dining room, cashier, and kitchen in calm sync.
+            <h1 class="site-display-hero text-[var(--color-ink)]">
+              Dining room, cashier, and kitchen — moving in one quiet rhythm.
             </h1>
 
-            <p class="text-base sm:text-lg text-[var(--color-muted)] prose-measure text-pretty">
-              Servio connects visual table seating, one-tap dish ordering, upfront cashiering with 80 mm receipts, and a high-contrast Kitchen Board — built for family-run Filipino restaurants on local Wi-Fi with zero internet dependency.
+            <p class="site-body-lg text-[var(--color-muted)] max-w-[52ch] text-pretty">
+              Servio connects visual table seating, one-tap Filipino dish ordering, upfront
+              cashiering with 80 mm thermal receipts, and a high-contrast Kitchen Display Board.
+              Built for family-run dining rooms on local Wi-Fi with zero internet dependency.
             </p>
 
             <div class="flex flex-wrap items-center gap-3 pt-1">
-              <BaseButton
-                v-if="authStore.isAuthenticated"
-                variant="primary"
-                size="lg"
-                trailing-icon="chevron-right"
-                @click="goToWorkspace"
-              >
-                Continue to {{ workspaceLabel }}
-              </BaseButton>
               <router-link
-                v-else
-                to="/login"
-                class="inline-flex items-center justify-center gap-2 min-h-[48px] px-6 rounded-[var(--radius-pill)] bg-[var(--color-accent)] text-[var(--color-surface)] text-base font-semibold hover:bg-[var(--color-accent-hover)] active:translate-y-px transition-ui"
+                :to="authStore.isAuthenticated ? workspacePath : '/login'"
+                class="min-h-[48px] px-6 rounded-[var(--radius-input)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-[var(--color-surface)] text-base font-semibold inline-flex items-center gap-2 transition-colors"
               >
-                <span>Start Shift / Sign In</span>
-                <BaseIcon name="chevron-right" :size="18" />
+                <span>{{ authStore.isAuthenticated ? `Continue to ${workspaceLabel}` : 'Start shift' }}</span>
+                <BaseIcon name="chevron-right" :size="16" />
               </router-link>
 
               <a
-                href="#modules"
-                class="inline-flex items-center justify-center gap-2 min-h-[48px] px-5 rounded-[var(--radius-pill)] bg-[var(--color-surface)] border border-[var(--color-line)] hover:border-[var(--color-line-strong)] text-[var(--color-ink)] text-base font-semibold transition-ui"
+                href="#workflow"
+                class="min-h-[48px] px-5 rounded-[var(--radius-input)] border border-[var(--color-line-strong)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)] text-[var(--color-ink)] text-base font-semibold inline-flex items-center transition-colors"
               >
-                <span>See how it works</span>
+                See how it works
               </a>
             </div>
 
-            <!-- Quiet Operational Highlights -->
-            <div class="grid grid-cols-3 gap-3 pt-4 border-t border-[var(--color-line)] max-w-xl">
-              <div>
-                <p class="font-display text-xl font-bold text-[var(--color-ink)] tabular-nums">3 taps</p>
-                <p class="text-xs text-[var(--color-muted)]">From open table to checkout</p>
+            <!-- Quiet Operational Spec Line (No SaaS big-number KPI cards) -->
+            <dl class="grid grid-cols-2 sm:grid-cols-4 gap-y-4 pt-7 border-t border-[var(--color-line)] text-sm">
+              <div class="pr-4 sm:border-r sm:border-[var(--color-line)]">
+                <dt class="font-mono text-xs text-[var(--color-muted)]">Checkout</dt>
+                <dd class="font-semibold text-[var(--color-ink)] mt-0.5">3-tap pay first</dd>
               </div>
-              <div>
-                <p class="font-display text-xl font-bold text-[var(--color-ink)] tabular-nums">100% LAN</p>
-                <p class="text-xs text-[var(--color-muted)]">Zero external CDN calls</p>
+              <div class="sm:px-4 sm:border-r sm:border-[var(--color-line)]">
+                <dt class="font-mono text-xs text-[var(--color-muted)]">Receipts</dt>
+                <dd class="font-semibold text-[var(--color-ink)] mt-0.5">80 mm thermal</dd>
               </div>
-              <div>
-                <p class="font-display text-xl font-bold text-[var(--color-ink)] tabular-nums">80 mm</p>
-                <p class="text-xs text-[var(--color-muted)]">Thermal receipt ready</p>
+              <div class="pr-4 sm:px-4 sm:border-r sm:border-[var(--color-line)]">
+                <dt class="font-mono text-xs text-[var(--color-muted)]">Kitchen Board</dt>
+                <dd class="font-semibold text-[var(--color-ink)] mt-0.5 tabular-nums">3.5 s LAN sync</dd>
+              </div>
+              <div class="sm:pl-4">
+                <dt class="font-mono text-xs text-[var(--color-muted)]">Network</dt>
+                <dd class="font-semibold text-[var(--color-ink)] mt-0.5">100% offline</dd>
+              </div>
+            </dl>
+          </div>
+
+          <!-- Right Column: Authentic Table Photograph + Attached Printed Order Chit -->
+          <div class="lg:col-span-5 space-y-3">
+            <div class="site-frame aspect-[4/3]">
+              <img
+                :src="heroLeadDish.image || '/Dishes/Sinigang na Baboy.jpg'"
+                :alt="heroLeadDish.name"
+                width="640"
+                height="480"
+                class="w-full h-full object-cover"
+                loading="eager"
+              />
+            </div>
+
+            <!-- Printed Counter Docket Strip (Honest sample when signed out, real order when signed in) -->
+            <div class="rounded-[var(--radius-card)] bg-[var(--color-surface)] border border-[var(--color-line)] p-4 sm:p-5 space-y-3">
+              <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-dashed border-[var(--color-line-strong)]">
+                <span class="site-mono-index text-[var(--color-accent)]">
+                  {{ previewTicket.isLive ? 'Live Dining Room Ticket' : 'Sample Pay-First Flow' }}
+                </span>
+                <span class="font-mono text-xs text-[var(--color-muted)] tabular-nums">
+                  T-01–T-10 · {{ catalogItems.length }} dishes
+                </span>
+              </div>
+
+              <div class="flex items-baseline justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="font-display text-base font-bold text-[var(--color-ink)]">
+                    {{ previewTicket.heading }}
+                  </p>
+                  <p class="text-sm text-[var(--color-muted)] truncate mt-0.5">
+                    {{ previewTicket.summary }}
+                  </p>
+                </div>
+                <span class="font-mono text-base font-bold text-[var(--color-ink)] tabular-nums shrink-0">
+                  {{ formatCurrency(previewTicket.total) }}
+                </span>
+              </div>
+
+              <div class="flex items-center justify-between gap-2 pt-2 border-t border-[var(--color-line)] text-xs">
+                <span class="font-mono text-[var(--color-leaf-ink)] font-semibold">
+                  {{ previewTicket.badge }}
+                </span>
+                <router-link
+                  :to="authStore.isAuthenticated ? workspacePath : '/login'"
+                  class="min-h-[44px] px-2 -mr-2 inline-flex items-center font-semibold text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] transition-colors"
+                >
+                  {{ authStore.isAuthenticated ? `Open ${workspaceLabel} →` : 'Waiter · Kitchen · Admin →' }}
+                </router-link>
               </div>
             </div>
           </div>
+        </div>
+      </section>
 
-          <!-- Warm Visual Preview Card -->
-          <div class="lg:col-span-5">
-            <div class="rounded-[var(--radius-card)] bg-[var(--color-surface)] border border-[var(--color-line)] shadow-[var(--shadow-float)] overflow-hidden">
-              <div class="px-5 py-4 bg-[var(--color-sidebar)] text-[var(--color-sidebar-ink)] flex items-center justify-between gap-2">
-                <div class="flex items-center gap-2.5">
-                  <span class="w-2.5 h-2.5 rounded-full bg-[var(--color-leaf)]" aria-hidden="true" />
-                  <span class="font-display text-base font-bold">Live Dining Room Flow</span>
+      <!-- 2. LIVE MENU CATALOG — EDITORIAL PLATE FEATURE + PRINTED FILIPINO MENU SHEET -->
+      <section
+        id="dishes"
+        class="scroll-mt-24 py-14 sm:py-18 border-t border-[var(--color-line)] bg-[var(--color-surface)]"
+        aria-label="Live Servio menu dish showcase"
+      >
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          <!-- Header Row -->
+          <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+            <div class="space-y-2 max-w-2xl">
+              <p class="site-mono-index text-[var(--color-accent)]">
+                01 / Live POS Menu Catalog
+              </p>
+              <h2 class="site-display-xl text-[var(--color-ink)]">
+                Familiar Filipino plates, synced across every terminal.
+              </h2>
+              <p class="text-base text-[var(--color-muted)] max-w-[56ch]">
+                Prices, photos, and Sold Out switches updated in Admin Menu flow straight to every
+                waiter’s screen and kitchen ticket.
+              </p>
+            </div>
+
+            <!-- Quiet Architectural Stepper -->
+            <div v-if="carouselDishes.length > 0" class="flex items-center gap-2 shrink-0">
+              <span class="font-mono text-xs font-semibold text-[var(--color-muted)] tabular-nums pr-2">
+                {{ String(activeSlide + 1).padStart(2, '0') }} / {{ String(carouselDishes.length).padStart(2, '0') }}
+              </span>
+              <button
+                type="button"
+                class="w-11 h-11 rounded-[var(--radius-input)] border border-[var(--color-line-strong)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:bg-[var(--color-surface-alt)] inline-flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Previous dish"
+                @click="prevSlide"
+              >
+                <BaseIcon name="chevron-right" :size="17" custom-class="rotate-180" />
+              </button>
+              <button
+                type="button"
+                class="w-11 h-11 rounded-[var(--radius-input)] border border-[var(--color-line-strong)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:bg-[var(--color-surface-alt)] inline-flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Next dish"
+                @click="nextSlide"
+              >
+                <BaseIcon name="chevron-right" :size="17" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Asymmetric Plate Feature (Clean unobstructed photo left + structured notes right) -->
+          <div
+            v-if="currentDish"
+            class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start"
+            tabindex="0"
+            aria-roledescription="carousel"
+            aria-label="Featured dishes"
+            @keydown.left.prevent="prevSlide"
+            @keydown.right.prevent="nextSlide"
+          >
+            <div class="lg:col-span-7">
+              <div class="site-frame aspect-[4/3]">
+                <img
+                  :src="currentDish.image"
+                  :alt="currentDish.name"
+                  width="640"
+                  height="480"
+                  class="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+
+            <div class="lg:col-span-5 flex flex-col justify-between space-y-6">
+              <div class="space-y-3 pb-6 border-b border-[var(--color-line)]">
+                <div class="flex items-center gap-2 text-xs font-mono">
+                  <span
+                    class="w-2 h-2 rounded-full"
+                    :class="currentDish.is_available ? 'bg-[var(--color-leaf)]' : 'bg-[var(--color-berry)]'"
+                    aria-hidden="true"
+                  />
+                  <span
+                    class="font-semibold uppercase tracking-[0.05em]"
+                    :class="currentDish.is_available ? 'text-[var(--color-leaf-ink)]' : 'text-[var(--color-berry-ink)]'"
+                  >
+                    {{ currentDish.is_available ? 'Available on POS' : 'Marked Sold Out' }}
+                  </span>
+                  <span v-if="currentDish.is_popular" class="text-[var(--color-muted)]">
+                    · House favorite
+                  </span>
                 </div>
-                <span class="text-xs font-mono text-[var(--color-sidebar-muted)] tabular-nums">T-01 – T-10</span>
+
+                <h3 class="font-display text-2xl font-bold text-[var(--color-ink)]">
+                  {{ currentDish.name }}
+                </h3>
+
+                <p class="text-base text-[var(--color-muted)] leading-relaxed">
+                  {{ currentDish.description }}
+                </p>
+
+                <p class="servio-total-numeral text-2xl font-bold text-[var(--color-accent)] pt-1">
+                  {{ formatCurrency(currentDish.price) }}
+                </p>
               </div>
 
-              <div class="p-5 space-y-4">
-                <!-- Featured Filipino Dishes Preview -->
-                <div class="grid grid-cols-3 gap-2.5">
-                  <div
-                    v-for="dish in featuredDishes"
-                    :key="dish.name"
-                    class="rounded-[var(--radius-input)] border border-[var(--color-line)] overflow-hidden bg-[var(--color-bg)]"
+              <!-- Filmstrip Quick Dish Selector (Balanced 4-thumb row) -->
+              <div class="space-y-2.5">
+                <p class="site-mono-index text-[var(--color-muted)]">
+                  Browse plated dishes
+                </p>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    v-for="entry in nearbyDishes"
+                    :key="entry.dish.id"
+                    type="button"
+                    class="group text-left rounded-[var(--radius-input)] border overflow-hidden transition-colors cursor-pointer"
+                    :class="
+                      entry.index === activeSlide
+                        ? 'border-[var(--color-accent)] bg-[var(--color-bg)]'
+                        : 'border-[var(--color-line)] bg-[var(--color-surface)] hover:border-[var(--color-line-strong)]'
+                    "
+                    @click="activeSlide = entry.index"
                   >
-                    <div class="aspect-[4/3] overflow-hidden bg-[var(--color-surface-alt)]">
+                    <div class="aspect-[4/3] bg-[var(--color-surface-alt)] overflow-hidden">
                       <img
-                        :src="dish.image"
-                        :alt="dish.name"
+                        :src="entry.dish.image"
+                        :alt="entry.dish.name"
+                        width="240"
+                        height="180"
                         class="w-full h-full object-cover"
                         loading="lazy"
                       />
                     </div>
-                    <div class="p-2">
-                      <p class="text-xs font-bold text-[var(--color-ink)] truncate">{{ dish.name }}</p>
-                      <p class="text-xs font-semibold text-[var(--color-accent)] tabular-nums">{{ dish.price }}</p>
-                    </div>
-                  </div>
+                    <p class="px-2 py-1.5 text-xs font-semibold text-[var(--color-ink)] truncate">
+                      {{ entry.dish.name }}
+                    </p>
+                  </button>
                 </div>
+              </div>
+            </div>
+          </div>
 
-                <!-- Sample Pay-First Ticket Status -->
-                <div class="rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] p-3.5 space-y-2.5">
-                  <div class="flex items-center justify-between gap-2">
-                    <span class="font-display text-base font-bold text-[var(--color-ink)]">Table 4 · #1204</span>
-                    <span class="px-2.5 py-0.5 rounded-[var(--radius-pill)] bg-[var(--color-leaf-bg)] text-[var(--color-leaf-ink)] label-tracked">
-                      Paid · Cooking
-                    </span>
-                  </div>
-                  <div class="flex items-center justify-between text-sm text-[var(--color-muted)]">
-                    <span>Sinigang na Baboy + Calamansi Juice</span>
-                    <span class="font-bold text-[var(--color-ink)] tabular-nums">₱420.00</span>
-                  </div>
-                  <div class="grid grid-cols-3 gap-1.5 pt-1 text-xs font-semibold text-center">
-                    <span class="py-1.5 rounded-[var(--radius-input)] bg-[var(--color-leaf-bg)] text-[var(--color-leaf-ink)]">1. Paid</span>
-                    <span class="py-1.5 rounded-[var(--radius-input)] bg-[var(--color-pot-bg)] text-[var(--color-pot-ink)]">2. Cooking</span>
-                    <span class="py-1.5 rounded-[var(--radius-input)] bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-muted)]">3. Serve</span>
-                  </div>
-                </div>
+          <!-- Printed 2-Column Live Menu Sheet (Dotted Leaders + Crisp Rectangular Category Tabs) -->
+          <div class="pt-8 border-t border-[var(--color-line)] space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div
+                class="flex flex-wrap items-center gap-1.5"
+                role="group"
+                aria-label="Filter menu snapshot by category"
+              >
+                <button
+                  type="button"
+                  :aria-pressed="activeMenuCategoryId === null"
+                  class="min-h-[44px] px-4 rounded-[var(--radius-input)] text-sm font-semibold border transition-colors cursor-pointer"
+                  :class="
+                    activeMenuCategoryId === null
+                      ? 'bg-[var(--color-ink)] text-[var(--color-surface)] border-[var(--color-ink)]'
+                      : 'bg-[var(--color-surface)] border-[var(--color-line)] text-[var(--color-ink)] hover:border-[var(--color-line-strong)]'
+                  "
+                  @click="activeMenuCategoryId = null"
+                >
+                  All ({{ catalogItems.length }})
+                </button>
+                <button
+                  v-for="cat in catalogCategories"
+                  :key="cat.id"
+                  type="button"
+                  :aria-pressed="activeMenuCategoryId === cat.id"
+                  class="min-h-[44px] px-4 rounded-[var(--radius-input)] text-sm font-semibold border transition-colors cursor-pointer"
+                  :class="
+                    activeMenuCategoryId === cat.id
+                      ? 'bg-[var(--color-ink)] text-[var(--color-surface)] border-[var(--color-ink)]'
+                      : 'bg-[var(--color-surface)] border-[var(--color-line)] text-[var(--color-ink)] hover:border-[var(--color-line-strong)]'
+                  "
+                  @click="activeMenuCategoryId = cat.id"
+                >
+                  {{ cat.name }}
+                </button>
+              </div>
+
+              <router-link
+                v-if="!authStore.isAuthenticated || authStore.isAdmin"
+                :to="authStore.isAdmin ? '/admin/menu' : '/login'"
+                class="min-h-[44px] inline-flex items-center text-sm font-semibold text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] transition-colors"
+              >
+                {{ authStore.isAdmin ? 'Edit catalog in Admin Menu →' : 'Manage catalog in Admin →' }}
+              </router-link>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-1">
+              <div
+                v-for="item in snapshotMenuItems"
+                :key="item.id"
+                class="flex items-baseline gap-1 py-3 border-b border-[var(--color-line)]"
+                :class="!item.is_available ? 'opacity-65' : ''"
+              >
+                <span class="font-display text-base font-bold text-[var(--color-ink)]">
+                  {{ item.name }}
+                </span>
+                <span
+                  v-if="!item.is_available"
+                  class="ml-1.5 font-mono text-[11px] font-semibold uppercase text-[var(--color-berry-ink)]"
+                >
+                  (Sold out)
+                </span>
+                <span class="site-menu-leader" aria-hidden="true" />
+                <span class="font-mono text-sm font-semibold tabular-nums text-[var(--color-ink)] shrink-0">
+                  {{ formatCurrency(item.price) }}
+                </span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- SECTION 1: HOW IT WORKS (PAY FIRST, DINE AFTER) -->
-      <section id="modules" class="border-t border-[var(--color-line)] bg-[var(--color-surface)]/70 py-14 lg:py-18">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          <div class="max-w-2xl space-y-2">
-            <span class="label-tracked text-[var(--color-accent)]">Pay First, Dine After</span>
-            <h2 class="font-display text-2xl font-bold text-[var(--color-ink)]">
-              One clear order of service from table to kitchen.
-            </h2>
-            <p class="text-base text-[var(--color-muted)] text-pretty">
-              Every station stays in sync automatically — cooks only start preparing tickets once payment is confirmed at the counter.
+      <!-- 3. PAY-FIRST SERVICE FLOW — HAIRLINE 4-COLUMN LEDGER (REPLACES REPETITIVE ROUNDED CARDS) -->
+      <section
+        id="workflow"
+        class="scroll-mt-24 py-14 sm:py-18 bg-[var(--color-surface-alt)] border-y border-[var(--color-line)]"
+      >
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
+            <div class="lg:col-span-7 space-y-2">
+              <p class="site-mono-index text-[var(--color-accent)]">
+                02 / Pay-First Workflow
+              </p>
+              <h2 class="site-display-xl text-[var(--color-ink)]">
+                One clear order of service from table to kitchen.
+              </h2>
+            </div>
+            <p class="lg:col-span-5 text-base text-[var(--color-muted)] leading-relaxed">
+              Cooks only receive tickets once payment is confirmed at the register — eliminating
+              unpaid walkouts and mismatched verbal add-ons.
             </p>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <article
+          <ol class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t border-b border-[var(--color-line)] divide-y sm:divide-y-0 lg:divide-x divide-[var(--color-line)]">
+            <li
               v-for="step in workflowSteps"
               :key="step.num"
-              class="rounded-[var(--radius-card)] bg-[var(--color-surface)] border border-[var(--color-line)] p-5 space-y-3"
-            >
-              <div class="flex items-center justify-between gap-2">
-                <span class="w-10 h-10 rounded-[var(--radius-pill)] bg-[var(--color-accent-subtle)] text-[var(--color-accent)] flex items-center justify-center">
-                  <BaseIcon :name="step.icon" :size="20" />
-                </span>
-                <span class="label-tracked text-[var(--color-muted)]">{{ step.num }}</span>
-              </div>
-              <h3 class="font-display text-lg font-bold text-[var(--color-ink)]">
-                {{ step.title }}
-              </h3>
-              <p class="text-sm text-[var(--color-muted)] leading-relaxed">
-                {{ step.desc }}
-              </p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <!-- SECTION 2: OWNER TOOLS -->
-      <section id="owner-controls" class="border-t border-[var(--color-line)] py-14 lg:py-18">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          <div class="max-w-2xl space-y-2">
-            <span class="label-tracked text-[var(--color-accent)]">Owner Tools</span>
-            <h2 class="font-display text-2xl font-bold text-[var(--color-ink)]">
-              Clear daily numbers without accounting jargon.
-            </h2>
-            <p class="text-base text-[var(--color-muted)] text-pretty">
-              Update dishes, upload photos, mark sold-out items, manage staff shifts, and check daily Cash, GCash, and Card sales in one calm dashboard.
-            </p>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <article
-              v-for="tool in ownerTools"
-              :key="tool.title"
-              class="rounded-[var(--radius-card)] bg-[var(--color-surface)] border border-[var(--color-line)] p-6 space-y-3"
-            >
-              <span class="w-11 h-11 rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] text-[var(--color-accent)] flex items-center justify-center">
-                <BaseIcon :name="tool.icon" :size="20" />
-              </span>
-              <h3 class="font-display text-lg font-bold text-[var(--color-ink)]">
-                {{ tool.title }}
-              </h3>
-              <p class="text-sm text-[var(--color-muted)] leading-relaxed">
-                {{ tool.desc }}
-              </p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <!-- SECTION 3: STAFF STATIONS -->
-      <section id="stations" class="border-t border-[var(--color-line)] bg-[var(--color-surface)]/70 py-14 lg:py-18">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          <div class="max-w-2xl space-y-2">
-            <span class="label-tracked text-[var(--color-accent)]">Staff Stations</span>
-            <h2 class="font-display text-2xl font-bold text-[var(--color-ink)]">
-              Tailored screens for every role on the floor.
-            </h2>
-            <p class="text-base text-[var(--color-muted)] text-pretty">
-              Each account signs in directly to its dedicated screen — keeping waiters fast, cooks focused, and owners informed.
-            </p>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <article
-              v-for="station in staffStations"
-              :key="station.role"
-              class="rounded-[var(--radius-card)] border p-6 flex flex-col justify-between gap-5"
-              :class="station.dark ? 'bg-[var(--color-kds-bg)] border-[var(--color-kds-line)] text-[var(--color-kds-ink)]' : 'bg-[var(--color-surface)] border-[var(--color-line)] text-[var(--color-ink)]'"
+              class="py-6 sm:p-6 lg:first:pl-0 lg:last:pr-0 flex flex-col justify-between gap-5"
             >
               <div class="space-y-3">
                 <div class="flex items-center justify-between gap-2">
-                  <span
-                    class="px-3 py-1 rounded-[var(--radius-pill)] label-tracked"
-                    :class="station.dark ? 'bg-[var(--color-kds-honey)]/20 text-[var(--color-kds-honey)]' : 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]'"
-                  >
-                    {{ station.badge }}
+                  <span class="font-mono text-sm font-bold text-[var(--color-accent)] tabular-nums">
+                    {{ step.num }}
                   </span>
-                  <BaseIcon
-                    :name="station.icon"
-                    :size="20"
-                    :custom-class="station.dark ? 'text-[var(--color-kds-leaf)]' : 'text-[var(--color-accent)]'"
-                  />
+                  <span class="font-mono text-xs text-[var(--color-muted)]">
+                    {{ step.station }}
+                  </span>
                 </div>
+                <h3 class="site-display-md text-[var(--color-ink)]">
+                  {{ step.title }}
+                </h3>
+                <p class="text-sm text-[var(--color-muted)] leading-relaxed">
+                  {{ step.desc }}
+                </p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </section>
 
-                <h3
-                  class="font-display text-xl font-bold"
-                  :class="station.dark ? 'text-[var(--color-kds-ink)]' : 'text-[var(--color-ink)]'"
-                >
+      <!-- 4. STAFF STATIONS — FULL-WIDTH ESPRESSO DIRECTORY ROWS (REPLACES 3-TIER SAAS CARDS) -->
+      <section
+        id="stations"
+        class="scroll-mt-24 py-16 sm:py-20 bg-[var(--color-sidebar)] text-[var(--color-sidebar-ink)]"
+      >
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
+            <div class="lg:col-span-7 space-y-2">
+              <p class="site-mono-index text-[var(--color-kds-honey)]">
+                03 / Staff Stations
+              </p>
+              <h2 class="site-display-xl text-[var(--color-sidebar-ink)]">
+                Dedicated terminals for every role on the floor.
+              </h2>
+            </div>
+            <p class="lg:col-span-5 text-base text-[var(--color-sidebar-muted)] leading-relaxed">
+              Each staff account opens straight into its assigned station — keeping floor waiters
+              fast, kitchen cooks focused, and owners informed.
+            </p>
+          </div>
+
+          <div class="border-t border-[var(--color-sidebar-line)] divide-y divide-[var(--color-sidebar-line)]">
+            <article
+              v-for="(station, idx) in staffStations"
+              :key="station.role"
+              class="py-7 sm:py-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center"
+            >
+              <!-- Role Identity -->
+              <div class="lg:col-span-3 space-y-1">
+                <p class="font-mono text-xs text-[var(--color-kds-honey)] tabular-nums">
+                  0{{ idx + 1 }} · {{ station.badge }}
+                </p>
+                <h3 class="font-display text-xl font-bold text-[var(--color-sidebar-ink)]">
                   {{ station.role }}
                 </h3>
-
-                <ul class="space-y-2 text-sm">
-                  <li
-                    v-for="point in station.points"
-                    :key="point"
-                    class="flex items-start gap-2"
-                    :class="station.dark ? 'text-[var(--color-kds-muted)]' : 'text-[var(--color-muted)]'"
-                  >
-                    <BaseIcon
-                      name="check"
-                      :size="15"
-                      :custom-class="station.dark ? 'text-[var(--color-kds-leaf)] mt-0.5 shrink-0' : 'text-[var(--color-leaf-ink)] mt-0.5 shrink-0'"
-                    />
-                    <span>{{ point }}</span>
-                  </li>
-                </ul>
               </div>
 
-              <router-link
-                to="/login"
-                class="min-h-[44px] px-4 rounded-[var(--radius-pill)] inline-flex items-center justify-center gap-2 text-sm font-semibold transition-ui"
-                :class="station.dark ? 'bg-[var(--color-kds-surface)] hover:bg-[var(--color-kds-surface-hover)] text-[var(--color-kds-ink)] border border-[var(--color-kds-line)]' : 'bg-[var(--color-bg)] hover:bg-[var(--color-surface-alt)] text-[var(--color-ink)] border border-[var(--color-line)]'"
-              >
-                <span>Sign in as {{ station.shortName }}</span>
-                <BaseIcon name="chevron-right" :size="15" />
-              </router-link>
+              <!-- Operational Capabilities (Plain scannable prose, no pill soup) -->
+              <div class="lg:col-span-6 space-y-2">
+                <p class="text-base text-[var(--color-sidebar-ink)]/90 leading-relaxed">
+                  {{ station.summary }}
+                </p>
+                <p class="text-sm text-[var(--color-sidebar-muted)] leading-relaxed">
+                  {{ station.points.join(' · ') }}
+                </p>
+              </div>
+
+              <!-- Role-Aware Action (Preserves AUD-006 zero-bounce behavior) -->
+              <div class="lg:col-span-3 flex lg:justify-end">
+                <router-link
+                  v-if="!authStore.isAuthenticated || canAccessRoles(station.allowedRoles)"
+                  :to="authStore.isAuthenticated ? station.targetRoute : '/login'"
+                  class="min-h-[44px] px-4 rounded-[var(--radius-input)] text-sm font-semibold inline-flex items-center gap-1.5 transition-colors whitespace-nowrap"
+                  :class="
+                    station.featured
+                      ? 'bg-[var(--color-kds-pot)] text-[var(--color-kds-bg)] hover:brightness-95'
+                      : 'border border-[var(--color-sidebar-line)] bg-[var(--color-sidebar-surface)] text-[var(--color-sidebar-ink)] hover:border-[var(--color-sidebar-muted)]'
+                  "
+                >
+                  <span>{{ authStore.isAuthenticated ? station.openLabel : `Sign in as ${station.shortName}` }}</span>
+                  <BaseIcon name="chevron-right" :size="15" />
+                </router-link>
+                <span
+                  v-else
+                  class="min-h-[44px] px-4 rounded-[var(--radius-input)] border border-[var(--color-sidebar-line)] text-xs font-mono text-[var(--color-sidebar-muted)] inline-flex items-center"
+                >
+                  Requires {{ station.shortName }} account
+                </span>
+              </div>
             </article>
           </div>
         </div>
       </section>
 
-      <!-- SECTION 4: WHY SERVIO -->
-      <section id="architecture" class="border-t border-[var(--color-line)] py-14 lg:py-18">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div class="rounded-[var(--radius-card)] bg-[var(--color-sidebar)] text-[var(--color-sidebar-ink)] p-8 sm:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            <div class="lg:col-span-7 space-y-3">
-              <span class="label-tracked text-[var(--color-accent-soft)]">Built for Real Service</span>
-              <h2 class="font-display text-2xl font-bold text-[var(--color-sidebar-ink)]">
-                Keeps taking orders even when the internet goes down.
-              </h2>
-              <p class="text-base text-[var(--color-sidebar-muted)] prose-measure text-pretty">
-                All fonts, dish photos, icons, and layouts run locally on your restaurant Wi-Fi. No cloud lag, no monthly subscription walls, and readable receipts formatted for standard 80 mm thermal printers.
+      <!-- 5. OWNER CONTROLS & OFFLINE LAN — ASYMMETRIC EDITORIAL SPREAD (REPLACES 3-ICON-BOX GRID) -->
+      <section
+        id="owner-controls"
+        class="scroll-mt-24 py-16 sm:py-20 bg-[var(--color-bg)]"
+      >
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+          <div id="architecture" class="scroll-mt-24 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+            <div class="lg:col-span-5 lg:sticky lg:top-24 space-y-4">
+              <p class="site-mono-index text-[var(--color-accent)]">
+                04 / Owner Controls &amp; Local LAN
               </p>
+              <h2 class="site-display-xl text-[var(--color-ink)]">
+                Clear daily numbers, zero internet dependency.
+              </h2>
+              <p class="text-base text-[var(--color-muted)] leading-relaxed max-w-[44ch]">
+                All fonts (with verified native <code class="font-mono font-bold text-[var(--color-ink)]">₱</code> Peso glyphs),
+                dish photos, icons, and polling run strictly on your restaurant Wi-Fi. No cloud
+                lag, no subscription lockouts, and clean 80 mm receipts.
+              </p>
+              <div class="pt-2">
+                <router-link
+                  :to="authStore.isAuthenticated ? workspacePath : '/login'"
+                  class="min-h-[46px] px-5 rounded-[var(--radius-input)] bg-[var(--color-ink)] hover:bg-[var(--color-sidebar-surface)] text-[var(--color-surface)] text-sm font-semibold inline-flex items-center gap-2 transition-colors"
+                >
+                  <span>{{ authStore.isAuthenticated ? `Open ${workspaceLabel}` : 'Open Servio POS' }}</span>
+                  <BaseIcon name="chevron-right" :size="15" />
+                </router-link>
+              </div>
             </div>
 
-            <div class="lg:col-span-5 flex flex-col sm:flex-row lg:flex-col gap-3">
-              <router-link
-                to="/login"
-                class="min-h-[48px] px-6 rounded-[var(--radius-pill)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-[var(--color-surface)] text-base font-semibold inline-flex items-center justify-center gap-2 transition-ui"
+            <div class="lg:col-span-7 border-t border-[var(--color-line)] divide-y divide-[var(--color-line)]">
+              <div
+                v-for="item in ownerArchitectureItems"
+                :key="item.code"
+                class="py-6 grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-6 items-baseline"
               >
-                <span>Open Servio POS</span>
-                <BaseIcon name="chevron-right" :size="18" />
-              </router-link>
-              <p class="text-xs text-center text-[var(--color-sidebar-muted)]">
-                Supports phones (360px), tablets (768px), countertop POS, and wall KDS monitors.
+                <span class="sm:col-span-2 font-mono text-xs font-bold text-[var(--color-accent)]">
+                  {{ item.code }}
+                </span>
+                <div class="sm:col-span-10 space-y-1.5">
+                  <h3 class="site-display-md text-[var(--color-ink)]">
+                    {{ item.title }}
+                  </h3>
+                  <p class="text-sm sm:text-base text-[var(--color-muted)] leading-relaxed">
+                    {{ item.desc }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 6. LEFT-ALIGNED EDITORIAL QUICK ANSWERS (NOT centered) -->
+          <div class="pt-14 border-t border-[var(--color-line)] grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+            <div class="lg:col-span-4 space-y-2">
+              <p class="site-mono-index text-[var(--color-accent)]">
+                05 / Quick Answers
               </p>
+              <h2 class="site-display-xl text-[var(--color-ink)]">
+                How Servio runs on shift.
+              </h2>
+              <p class="text-sm text-[var(--color-muted)] leading-relaxed">
+                Supports handheld phones (360 px), dining room tablets, countertop POS registers,
+                and wall-mounted Kitchen Display screens.
+              </p>
+            </div>
+            <div class="lg:col-span-8">
+              <SiteAccordion :items="systemFaqs" />
             </div>
           </div>
         </div>
       </section>
     </main>
 
-    <!-- Footer -->
-    <footer class="relative z-10 border-t border-[var(--color-line)] bg-[var(--color-surface)] py-8">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div class="flex items-center gap-2.5">
-          <img
-            src="/servio-logo-icon.jpg"
-            alt="Servio"
-            width="28"
-            height="28"
-            class="w-7 h-7 rounded-[var(--radius-input)] object-cover border border-[var(--color-line)]"
-          />
-          <span class="servio-wordmark text-base text-[var(--color-ink)]">Servio</span>
-          <span class="text-sm text-[var(--color-muted)]">· Cooked to order, served warm.</span>
-        </div>
-
-        <router-link
-          to="/login"
-          class="text-sm font-semibold text-[var(--color-accent)] hover:underline"
-        >
-          Staff Sign In →
-        </router-link>
-      </div>
-    </footer>
+    <HomeFooter :section-links="sectionLinks" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import '@/styles/publicSite.css'
+import { ref, computed, onMounted } from 'vue'
+import type { Role } from '@/types'
 import { useAuthStore } from '@/stores/auth'
+import { useMenuStore } from '@/stores/menu'
 import { useOrdersStore } from '@/stores/orders'
-import { useCartStore } from '@/stores/cart'
-import BaseButton from '@/components/base/BaseButton.vue'
+import { USE_MOCK } from '@/services/api'
+import { MOCK_CATEGORIES, MOCK_MENU_ITEMS } from '@/services/mockData'
+import { formatCurrency, formatTableLabel } from '@/utils/format'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+import SiteAccordion, { type AccordionItem } from '@/components/site/SiteAccordion.vue'
+import HomeHeader, { type HomeSectionLink, type SystemExploreModule } from '@/components/home/HomeHeader.vue'
+import HomeFooter from '@/components/home/HomeFooter.vue'
 
-const router = useRouter()
 const authStore = useAuthStore()
+const menuStore = useMenuStore()
 const ordersStore = useOrdersStore()
-const cartStore = useCartStore()
-const isMobileNavOpen = ref(false)
 
-const navLinks = [
-  { href: '#modules', label: 'How It Works' },
-  { href: '#owner-controls', label: 'Owner Tools' },
-  { href: '#stations', label: 'Staff Stations' },
-  { href: '#architecture', label: 'Why Servio' },
-]
+const activeSlide = ref(0)
+const activeMenuCategoryId = ref<number | null>(null)
 
 const workspaceLabel = computed(() => {
   if (authStore.isAdmin) return 'Owner Dashboard'
@@ -496,66 +554,182 @@ const workspaceLabel = computed(() => {
   return 'Dining Room'
 })
 
-const goToWorkspace = () => {
-  if (authStore.isAdmin) router.push('/admin/dashboard')
-  else if (authStore.isKitchen) router.push('/kitchen')
-  else router.push('/tables')
+const workspacePath = computed(() => {
+  if (authStore.isAdmin) return '/admin/dashboard'
+  if (authStore.isKitchen) return '/kitchen'
+  return '/tables'
+})
+
+const canAccessRoles = (allowedRoles: Role[]) =>
+  Boolean(authStore.role && allowedRoles.includes(authStore.role))
+
+const catalogItems = computed(() =>
+  menuStore.items.length > 0 ? menuStore.items : MOCK_MENU_ITEMS,
+)
+
+const catalogCategories = computed(() =>
+  menuStore.categories.length > 0 ? menuStore.categories : MOCK_CATEGORIES,
+)
+
+const heroLeadDish = computed(() => {
+  const withPhoto = catalogItems.value.filter((d) => Boolean(d.image))
+  return withPhoto[0] ?? { name: 'Sinigang na Baboy', image: '/Dishes/Sinigang na Baboy.jpg' }
+})
+
+const carouselDishes = computed(() =>
+  catalogItems.value.filter((d) => Boolean(d.image)).slice(0, 10),
+)
+
+const prevIndex = computed(() =>
+  carouselDishes.value.length > 0
+    ? (activeSlide.value - 1 + carouselDishes.value.length) % carouselDishes.value.length
+    : 0,
+)
+
+const nextIndex = computed(() =>
+  carouselDishes.value.length > 0
+    ? (activeSlide.value + 1) % carouselDishes.value.length
+    : 0,
+)
+
+const currentDish = computed(() => carouselDishes.value[activeSlide.value] ?? null)
+
+const nearbyDishes = computed(() => {
+  const list = carouselDishes.value
+  if (list.length === 0) return []
+  const indices = [
+    activeSlide.value,
+    (activeSlide.value + 1) % list.length,
+    (activeSlide.value + 2) % list.length,
+    (activeSlide.value + 3) % list.length,
+  ]
+  const unique = Array.from(new Set(indices))
+  return unique.map((index) => ({ index, dish: list[index]! }))
+})
+
+const prevSlide = () => {
+  activeSlide.value = prevIndex.value
 }
 
-const handleLogout = async () => {
-  ordersStore.stopPolling()
-  cartStore.resetAll()
-  await authStore.logout()
+const nextSlide = () => {
+  activeSlide.value = nextIndex.value
 }
 
-const featuredDishes = [
-  { name: 'Sinigang na Baboy', price: '₱345.00', image: '/Dishes/Sinigang na Baboy.jpg' },
-  { name: 'Pork Belly Kare-Kare', price: '₱360.00', image: '/Dishes/Pork Belly Kare-Kare.jpg' },
-  { name: 'Chicken Inasal', price: '₱235.00', image: '/Dishes/Chicken Inasal.jpg' },
+const snapshotMenuItems = computed(() => {
+  const list = activeMenuCategoryId.value
+    ? catalogItems.value.filter((i) => i.category_id === activeMenuCategoryId.value)
+    : catalogItems.value
+  return list.slice(0, 12)
+})
+
+const previewTicket = computed(() => {
+  if (authStore.isAuthenticated && ordersStore.activeOrders.length > 0) {
+    const first = ordersStore.activeOrders[0]
+    const refNum = first.order_ref.replace(/^#?ORD-?/i, '')
+    const itemsText = first.items
+      .slice(0, 2)
+      .map((i) => i.name)
+      .join(' + ')
+    return {
+      isLive: true,
+      heading: `${formatTableLabel(first.table_number)} · #${refNum}`,
+      badge: first.payment_status === 'paid' ? `PAID · ${first.status.toUpperCase()}` : 'UNPAID',
+      summary: itemsText || 'Active table items',
+      total: first.total,
+    }
+  }
+  return {
+    isLive: false,
+    heading: 'Table 4 · Sample #1204',
+    badge: '1. PAID → 2. COOKING → 3. SERVE',
+    summary: 'Sinigang na Baboy + Calamansi Juice',
+    total: 420,
+  }
+})
+
+const sectionLinks: HomeSectionLink[] = [
+  { href: '#dishes', label: 'Menu' },
+  { href: '#workflow', label: 'Workflow' },
+  { href: '#stations', label: 'Stations' },
+  { href: '#owner-controls', label: 'Owner tools' },
+  { href: '#architecture', label: 'Why Servio' },
+]
+
+const systemExploreCards: SystemExploreModule[] = [
+  {
+    title: 'Visual Table Map',
+    desc: 'Live 2–8 seat floor map with available, occupied & ready alerts.',
+    sectionHref: '#workflow',
+    authRoute: '/tables',
+    allowedRoles: ['waiter', 'admin'],
+    roleTag: 'Floor',
+  },
+  {
+    title: 'Waiter POS',
+    desc: 'One-tap Filipino dish cards, reload-safe drafts & kitchen notes.',
+    sectionHref: '#dishes',
+    authRoute: '/pos',
+    allowedRoles: ['waiter', 'admin'],
+    roleTag: 'Floor',
+  },
+  {
+    title: 'Pay First & Receipts',
+    desc: 'Cash, GCash & Card upfront checkout with 80 mm thermal print.',
+    sectionHref: '#workflow',
+    authRoute: '/payment',
+    allowedRoles: ['waiter', 'admin'],
+    roleTag: 'Cashier',
+  },
+  {
+    title: 'Kitchen Board (KDS)',
+    desc: 'High-contrast dark display with 3.5 s paid-ticket polling.',
+    sectionHref: '#stations',
+    authRoute: '/kitchen',
+    allowedRoles: ['kitchen', 'admin'],
+    roleTag: 'Kitchen',
+  },
+  {
+    title: 'Sales & Reports',
+    desc: 'Manila-time daily revenue, payment split & best-selling dishes.',
+    sectionHref: '#owner-controls',
+    authRoute: '/admin/dashboard',
+    allowedRoles: ['admin'],
+    roleTag: 'Admin',
+  },
+  {
+    title: 'Menu & Staff Admin',
+    desc: 'Dish photo uploads, instant Sold Out switches & staff accounts.',
+    sectionHref: '#owner-controls',
+    authRoute: '/admin/menu',
+    allowedRoles: ['admin'],
+    roleTag: 'Admin',
+  },
 ]
 
 const workflowSteps = [
   {
-    num: 'Step 1',
-    icon: 'table',
-    title: 'Visual Table Map',
-    desc: 'See open, occupied, and food-ready tables across the dining room and seat guests in one tap.',
+    num: '01',
+    station: 'Tables',
+    title: 'Choose a Table',
+    desc: 'See open, occupied, unpaid, and food-ready tables across the dining room and seat guests in one tap.',
   },
   {
-    num: 'Step 2',
-    icon: 'dish',
-    title: 'One-Tap Ordering',
-    desc: 'Tap Filipino dishes, desserts, and drinks straight into the tray with optional kitchen notes.',
+    num: '02',
+    station: 'Waiter POS',
+    title: 'Take the Order',
+    desc: 'Tap Filipino dishes, desserts, and drinks straight into the tray with optional kitchen notes and live totals.',
   },
   {
-    num: 'Step 3',
-    icon: 'receipt',
-    title: 'Pay First & Print',
-    desc: 'Accept Cash, GCash, or Card upfront with automatic change math and an 80 mm thermal receipt.',
+    num: '03',
+    station: 'Pay Bill',
+    title: 'Collect Payment First',
+    desc: 'Accept Cash, GCash, or Card upfront with quick-tender change math and an 80 mm thermal receipt.',
   },
   {
-    num: 'Step 4',
-    icon: 'cooking',
+    num: '04',
+    station: 'Kitchen Board',
     title: 'Cook, Serve & Clear',
-    desc: 'Paid tickets appear instantly on the Kitchen Board; clear the table once guests finish dining.',
-  },
-]
-
-const ownerTools = [
-  {
-    icon: 'bar-chart',
-    title: 'Daily Sales & Payment Split',
-    desc: 'Track Manila-time daily revenue, average table bill, Cash/GCash/Card breakdown, and best-selling dishes.',
-  },
-  {
-    icon: 'book-open',
-    title: 'Menu & Dish Photo Upload',
-    desc: 'Add or edit dishes with drag-and-drop photo upload, Popular badges, and instant Sold Out switches.',
-  },
-  {
-    icon: 'users',
-    title: 'Staff Access Governance',
-    desc: 'Create Admin, Waiter, and Kitchen accounts, reset temporary passwords, and deactivate accounts safely.',
+    desc: 'Paid tickets land on the Kitchen Board immediately; serve warm and clear tables safely once guests leave.',
   },
 ]
 
@@ -564,37 +738,105 @@ const staffStations = [
     role: 'Waiter & Cashier',
     shortName: 'Waiter',
     badge: 'Floor & Register',
-    icon: 'table',
-    dark: false,
+    featured: false,
+    targetRoute: '/tables',
+    openLabel: 'Open Dining Room',
+    allowedRoles: ['waiter', 'admin'] as Role[],
+    summary: 'Built for fast table turnover, zero missed add-ons, and calm upfront billing.',
     points: [
-      'Visual 2/4/6/8-seat table map showing live status',
-      'Instant dish cards with zero distracting popups',
-      'Upfront Cash, GCash, and Card checkout + receipt print',
+      'Visual 2–8 seat floor map',
+      'Reload-safe POS drafts & kitchen notes',
+      'Cash, GCash & Card with 80 mm thermal receipts',
     ],
   },
   {
     role: 'Kitchen Staff',
     shortName: 'Kitchen',
     badge: 'Wall Display (KDS)',
-    icon: 'cooking',
-    dark: true,
+    featured: true,
+    targetRoute: '/kitchen',
+    openLabel: 'Open Kitchen Board',
+    allowedRoles: ['kitchen', 'admin'] as Role[],
+    summary: 'Full-screen dark display engineered to stay readable across a bright, busy pass.',
     points: [
-      'Full-screen dark board with large, high-contrast dish text',
-      'Receives paid tickets only with automatic 3.5 s refresh',
-      'Live elapsed timers and >10 min late ticket alerts',
+      'Paid tickets only via 3.5 s LAN polling',
+      'Large high-contrast dish text',
+      'Live elapsed timers & >10 min late alerts',
     ],
   },
   {
     role: 'Owner & Admin',
     shortName: 'Owner',
     badge: 'Management',
-    icon: 'bar-chart',
-    dark: false,
+    featured: false,
+    targetRoute: '/admin/dashboard',
+    openLabel: 'Open Owner Dashboard',
+    allowedRoles: ['admin'] as Role[],
+    summary: 'Tune the menu, watch daily sales, and manage staff accounts without spreadsheet friction.',
     points: [
-      'Date-filtered revenue reports and top-selling dishes',
-      'Full menu catalog editor with live dish photo uploads',
-      'Live floor monitor and staff account controls',
+      'Manila-time revenue & payment split',
+      'Live dish editor & Sold Out toggles',
+      'Role-based staff accounts & safe deactivation',
     ],
   },
 ]
+
+const ownerArchitectureItems = [
+  {
+    code: 'RPT',
+    title: 'Daily sales & payment split',
+    desc: 'Track Manila-time daily revenue, average table bill, exact Cash/GCash/Card percentages, and best-selling Filipino dishes by date range.',
+  },
+  {
+    code: 'CAT',
+    title: 'Menu catalog & instant Sold Out',
+    desc: 'Add or edit dishes with JPG/PNG/WebP photo uploads, House Favorite flags, and Sold Out switches that propagate immediately across waiter terminals.',
+  },
+  {
+    code: 'RBAC',
+    title: 'Role-based staff governance',
+    desc: 'Create Admin, Waiter, and Kitchen accounts with generated temporary passwords, first-login password updates, and history-preserving soft deactivation.',
+  },
+  {
+    code: 'LAN',
+    title: 'Offline local Wi-Fi resilience',
+    desc: 'Zero external CDNs, self-hosted fonts with verified ₱ Peso glyphs, and lightweight 3.5-second polling so service keeps moving even when internet drops.',
+  },
+]
+
+const systemFaqs: AccordionItem[] = [
+  {
+    id: 'sys-pay-first',
+    question: 'How does the Pay First, Dine After workflow work?',
+    answer:
+      'Waiters tap an open table, add dishes in POS, and collect Cash, GCash, or Card payment upfront. Only paid orders are dispatched to the Kitchen Display (KDS), eliminating unpaid walkouts and mismatched kitchen tickets.',
+  },
+  {
+    id: 'sys-offline',
+    question: 'Does Servio work when restaurant internet drops?',
+    answer:
+      'Yes. All typography (including verified Philippine Peso ₱ glyphs), icons, dish photos, and polling endpoints run strictly over local restaurant Wi-Fi / LAN with zero external CDN dependencies.',
+  },
+  {
+    id: 'sys-sync',
+    question: 'How do Kitchen, Waiter, and Admin screens stay synchronized?',
+    answer:
+      'Servio uses lightweight 3.5-second visibility-aware polling across Tables, Active Orders, Payment, and Kitchen screens so devices recover automatically from Wi-Fi handoffs without brittle WebSocket daemons.',
+  },
+  {
+    id: 'sys-receipt',
+    question: 'How does 80 mm thermal receipt printing work?',
+    answer:
+      'After payment confirmation, Servio opens a clean receipt preview formatted strictly to 80 mm paper (72 mm / 42-column Geist Mono print CSS) ready for countertop thermal printers.',
+  },
+]
+
+onMounted(async () => {
+  if (USE_MOCK || authStore.isAuthenticated) {
+    await menuStore.fetchMenu()
+  }
+  if (authStore.isAuthenticated && ordersStore.orders.length === 0) {
+    await ordersStore.fetchOrders(true)
+  }
+})
 </script>

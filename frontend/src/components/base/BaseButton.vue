@@ -90,7 +90,7 @@ const props = withDefaults(
     form: undefined,
     variant: 'primary',
     size: 'md',
-    pill: true,
+    pill: false,
     disabled: false,
     loading: false,
     icon: '',

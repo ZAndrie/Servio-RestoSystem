@@ -29,14 +29,19 @@
         />
       </div>
 
-      <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+      <div
+        role="group"
+        aria-label="Filter menu by category"
+        class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0"
+      >
         <button
           type="button"
-          class="min-h-[44px] px-4 rounded-[var(--radius-pill)] text-sm font-medium transition-ui cursor-pointer shrink-0"
+          :aria-pressed="categoryFilter === null"
+          class="min-h-[44px] px-4 rounded-[var(--radius-input)] text-sm font-semibold transition-ui cursor-pointer shrink-0 border"
           :class="
             categoryFilter === null
-              ? 'bg-[var(--color-ink)] text-[var(--color-surface)] font-semibold'
-              : 'bg-[var(--color-surface)] text-[var(--color-ink)] border border-[var(--color-line)]'
+              ? 'bg-[var(--color-ink)] text-[var(--color-surface)] border-[var(--color-ink)]'
+              : 'bg-[var(--color-surface)] text-[var(--color-ink)] border-[var(--color-line)] hover:border-[var(--color-line-strong)]'
           "
           @click="categoryFilter = null"
         >
@@ -46,11 +51,12 @@
           v-for="cat in menuStore.categories"
           :key="cat.id"
           type="button"
-          class="min-h-[44px] px-4 rounded-[var(--radius-pill)] text-sm font-medium transition-ui cursor-pointer shrink-0"
+          :aria-pressed="categoryFilter === cat.id"
+          class="min-h-[44px] px-4 rounded-[var(--radius-input)] text-sm font-semibold transition-ui cursor-pointer shrink-0 border"
           :class="
             categoryFilter === cat.id
-              ? 'bg-[var(--color-ink)] text-[var(--color-surface)] font-semibold'
-              : 'bg-[var(--color-surface)] text-[var(--color-ink)] border border-[var(--color-line)]'
+              ? 'bg-[var(--color-ink)] text-[var(--color-surface)] border-[var(--color-ink)]'
+              : 'bg-[var(--color-surface)] text-[var(--color-ink)] border-[var(--color-line)] hover:border-[var(--color-line-strong)]'
           "
           @click="categoryFilter = cat.id"
         >
@@ -208,7 +214,7 @@
       :title="form.id ? 'Edit dish' : 'Add new dish'"
       subtitle="Price changes only apply to new orders — past receipts stay untouched."
     >
-      <form id="dish-editor-form" class="space-y-4" @submit.prevent="saveDish">
+      <form id="dish-editor-form" novalidate class="space-y-4" @submit.prevent="saveDish">
         <!-- Dish Photo Upload (Click or Drag & Drop with 4:3 live preview) -->
         <div class="space-y-1.5">
           <label for="dish-photo-input" class="block text-sm font-semibold text-[var(--color-ink)]">
@@ -304,8 +310,20 @@
             type="text"
             required
             placeholder="e.g. Sinigang na Baboy"
-            class="w-full min-h-[44px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] text-base text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+            :aria-invalid="formErrors.name ? 'true' : undefined"
+            :aria-describedby="formErrors.name ? 'dish-name-error' : undefined"
+            class="w-full min-h-[44px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border text-base text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+            :class="formErrors.name ? 'border-[var(--color-berry)]' : 'border-[var(--color-line)]'"
+            @input="formErrors.name = ''"
           />
+          <p
+            v-if="formErrors.name"
+            id="dish-name-error"
+            role="alert"
+            class="text-sm font-semibold text-[var(--color-berry-ink)]"
+          >
+            {{ formErrors.name }}
+          </p>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -335,8 +353,20 @@
               min="1"
               step="0.01"
               required
-              class="w-full min-h-[44px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] text-base tabular-nums text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+              :aria-invalid="formErrors.price ? 'true' : undefined"
+              :aria-describedby="formErrors.price ? 'dish-price-error' : undefined"
+              class="w-full min-h-[44px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border text-base tabular-nums text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+              :class="formErrors.price ? 'border-[var(--color-berry)]' : 'border-[var(--color-line)]'"
+              @input="formErrors.price = ''"
             />
+            <p
+              v-if="formErrors.price"
+              id="dish-price-error"
+              role="alert"
+              class="text-sm font-semibold text-[var(--color-berry-ink)]"
+            >
+              {{ formErrors.price }}
+            </p>
           </div>
         </div>
 
@@ -354,10 +384,10 @@
         </div>
 
         <div class="flex items-center justify-between pt-1">
-          <span class="text-sm font-semibold text-[var(--color-ink)]">
+          <span id="dish-popular-label" class="text-sm font-semibold text-[var(--color-ink)]">
             Highlight as Popular dish
           </span>
-          <BaseSwitch v-model="form.is_popular" />
+          <BaseSwitch v-model="form.is_popular" aria-labelledby="dish-popular-label" />
         </div>
       </form>
 
@@ -393,6 +423,7 @@ import BaseIcon from '@/components/icons/BaseIcon.vue'
 import DishArtwork from '@/components/base/DishArtwork.vue'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024 // 5 MB
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 const menuStore = useMenuStore()
 
@@ -408,6 +439,11 @@ const imagePreviewUrl = ref<string | null>(null)
 const uploadError = ref<string | null>(null)
 const isDraggingFile = ref(false)
 let activeObjectUrl: string | null = null
+
+const formErrors = reactive({
+  name: '',
+  price: '',
+})
 
 const form = reactive({
   id: undefined as number | undefined,
@@ -461,8 +497,8 @@ const triggerFilePicker = () => {
 
 const applySelectedFile = (file: File) => {
   uploadError.value = null
-  if (!file.type.startsWith('image/')) {
-    uploadError.value = 'Please choose an image file (JPG, PNG, or WebP).'
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    uploadError.value = 'Unsupported file type. Please choose a JPG, PNG, or WebP image.'
     return
   }
   if (file.size > MAX_IMAGE_BYTES) {
@@ -504,6 +540,8 @@ const openEditor = (item?: MenuItem) => {
   selectedImageFile.value = null
   selectedFileName.value = ''
   uploadError.value = null
+  formErrors.name = ''
+  formErrors.price = ''
   isDraggingFile.value = false
 
   if (item) {
@@ -531,13 +569,14 @@ const openEditor = (item?: MenuItem) => {
 const saveDish = async () => {
   const cleanName = form.name.trim()
   const numericPrice = Number(form.price)
-  if (!cleanName || !Number.isFinite(numericPrice) || numericPrice <= 0) {
-    uploadError.value = !cleanName
-      ? 'Please enter a dish name.'
+  formErrors.name = cleanName ? '' : 'Please enter a dish name.'
+  formErrors.price =
+    Number.isFinite(numericPrice) && numericPrice > 0
+      ? ''
       : 'Please enter a valid price greater than ₱0.'
-    return
-  }
-  uploadError.value = null
+
+  if (formErrors.name || formErrors.price) return
+
   isSaving.value = true
   try {
     const ok = await menuStore.saveItem(

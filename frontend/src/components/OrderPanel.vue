@@ -165,20 +165,24 @@
             </button>
 
             <div v-else class="flex items-center gap-2">
-              <input
-                type="text"
-                :value="item.notes"
-                placeholder="e.g. No garlic, less ice, extra rice"
-                :aria-label="`Kitchen note for ${item.name}`"
-                class="flex-1 min-h-[40px] px-3 py-1.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] text-sm text-[var(--color-ink)] placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)] focus:outline-none transition-ui"
-                @input="onNoteInput(index, $event)"
-              />
+              <div class="relative flex-1 flex items-center">
+                <span class="absolute left-3 text-xs font-bold text-[var(--color-accent)] pointer-events-none">
+                  Note:
+                </span>
+                <input
+                  type="text"
+                  :value="item.notes"
+                  placeholder="e.g. No garlic, less ice, extra rice"
+                  :aria-label="`Kitchen note for ${item.name}`"
+                  class="w-full min-h-[40px] pl-14 pr-3 py-1.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] text-sm text-[var(--color-ink)] placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)] focus:outline-none transition-ui"
+                  @input="onNoteInput(index, $event)"
+                />
+              </div>
               <button
-                v-if="!item.notes"
                 type="button"
-                class="touch-extend-44 w-8 h-8 rounded-[var(--radius-input)] flex items-center justify-center text-[var(--color-muted)] hover:text-[var(--color-ink)] cursor-pointer"
-                aria-label="Hide note input"
-                @click="openNotes[itemKey(item, index)] = false"
+                class="touch-extend-44 w-9 h-9 rounded-[var(--radius-input)] flex items-center justify-center text-[var(--color-muted)] hover:text-[var(--color-berry-ink)] hover:bg-[var(--color-berry-bg)] cursor-pointer shrink-0"
+                :aria-label="item.notes ? `Clear kitchen note for ${item.name}` : 'Hide note input'"
+                @click="clearOrHideNote(index, item)"
               >
                 <BaseIcon name="x" :size="14" />
               </button>
@@ -257,7 +261,7 @@ import { reactive, computed } from 'vue'
 import type { OrderItem } from '@/types'
 import { useCartStore } from '@/stores/cart'
 import { useOrdersStore } from '@/stores/orders'
-import { formatCurrency } from '@/utils/format'
+import { formatCurrency, formatTableLabel } from '@/utils/format'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import DishArtwork from '@/components/base/DishArtwork.vue'
@@ -287,12 +291,16 @@ const openNotes = reactive<Record<string, boolean>>({})
 const itemKey = (item: OrderItem, index: number) =>
   item.client_key || `${item.menu_item_id}-${index}`
 
-const friendlyTableName = computed(() => {
-  const num = Number((props.tableNumber || '').replace(/\D/g, ''))
-  return Number.isFinite(num) && num > 0 ? `Table ${num}` : props.tableNumber
-})
+const friendlyTableName = computed(() => formatTableLabel(props.tableNumber))
 
 const onNoteInput = (index: number, event: Event) => {
   cartStore.updateNotes(index, (event.target as HTMLInputElement).value)
+}
+
+const clearOrHideNote = (index: number, item: OrderItem) => {
+  if (item.notes) {
+    cartStore.updateNotes(index, '')
+  }
+  openNotes[itemKey(item, index)] = false
 }
 </script>

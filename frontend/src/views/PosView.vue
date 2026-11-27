@@ -1,40 +1,30 @@
 <template>
   <div class="relative flex-1 flex min-h-[100dvh] bg-[var(--color-bg)]">
-    <!-- Subtle warm leaf accent in one corner -->
-    <svg
-      class="pointer-events-none select-none fixed top-0 right-[340px] w-[320px] h-[320px] text-[var(--color-leaf)] opacity-[0.06] blur-[2px] hidden lg:block"
-      viewBox="0 0 240 240"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M210 24C122 36 58 92 38 196c98-18 158-76 172-172Z" />
-    </svg>
-
     <!-- Main Ordering Area -->
     <main class="relative flex-1 min-w-0 flex flex-col px-4 sm:px-6 lg:px-8 pt-6 pb-28 md:pb-6 gap-5">
-      <!-- Top Flow Bar: Step 1 (Back to Tables) -> Step 2 (Take Order) + Quick Table Switcher -->
+      <!-- Top Flow Bar: Clean Typographic Step Rail + Quick Table Switcher -->
       <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="space-y-2 min-w-0">
-          <div class="flex flex-wrap items-center gap-2 text-sm font-semibold">
+          <div class="flex flex-wrap items-center gap-1.5 text-sm">
             <button
               type="button"
-              class="min-h-[44px] px-3.5 rounded-[var(--radius-pill)] bg-[var(--color-surface)] border border-[var(--color-line)] hover:border-[var(--color-line-strong)] text-[var(--color-ink)] inline-flex items-center gap-1.5 transition-ui cursor-pointer"
+              class="min-h-[44px] -ml-2 px-2.5 rounded-[var(--radius-input)] text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-alt)] font-semibold inline-flex items-center gap-1.5 transition-ui cursor-pointer"
               @click="backToTables"
             >
-              <BaseIcon name="arrow-left" :size="15" />
+              <BaseIcon name="arrow-left" :size="14" />
               <span>1. Tables</span>
             </button>
 
-            <BaseIcon name="chevron-right" :size="14" custom-class="text-[var(--color-muted)]" />
+            <span class="text-[var(--color-line-strong)] font-mono" aria-hidden="true">/</span>
 
-            <span class="px-3.5 py-2 rounded-[var(--radius-pill)] bg-[var(--color-accent)] text-[var(--color-surface)] font-bold">
+            <span class="px-2.5 py-1 rounded-[var(--radius-input)] bg-[var(--color-accent-subtle)] text-[var(--color-accent)] font-bold">
               2. Take Order · {{ friendlyTableName(selectedTable?.table_number || 'T-01') }}
             </span>
 
-            <BaseIcon name="chevron-right" :size="14" custom-class="text-[var(--color-muted)]" />
+            <span class="text-[var(--color-line-strong)] font-mono" aria-hidden="true">/</span>
 
-            <span class="px-3 py-2 rounded-[var(--radius-pill)] bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-muted)]">
-              3. Pay Bill
+            <span class="px-1 text-[var(--color-muted)] font-medium">
+              3. Pay &amp; Send to Kitchen
             </span>
           </div>
 
@@ -62,7 +52,7 @@
           />
 
           <div
-            class="w-11 h-11 rounded-[var(--radius-pill)] bg-[var(--color-sidebar)] text-[var(--color-sidebar-ink)] font-bold text-sm flex items-center justify-center shrink-0 select-none border border-[var(--color-line)]"
+            class="w-11 h-11 rounded-[var(--radius-input)] bg-[var(--color-sidebar)] text-[var(--color-sidebar-ink)] font-mono font-bold text-sm flex items-center justify-center shrink-0 select-none border border-[var(--color-line)]"
             :title="authStore.user?.name || 'Staff'"
             :aria-label="`Signed in as ${authStore.user?.name || 'Staff'}`"
           >
@@ -71,8 +61,8 @@
         </div>
       </header>
 
-      <!-- Search Bar + Category Filter Pills -->
-      <section aria-label="Menu search and filters" class="space-y-3.5">
+      <!-- Search Bar + Crisp Rectangular Category Tabs -->
+      <section aria-label="Menu search and filters" class="space-y-3">
         <BaseCombobox
           v-model="searchQuery"
           :options="dishSearchOptions"
@@ -87,19 +77,18 @@
         />
 
         <div
-          class="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1"
-          role="tablist"
+          class="flex items-center gap-1.5 overflow-x-auto pb-1 -mx-1 px-1"
+          role="group"
           aria-label="Menu categories"
         >
           <button
             type="button"
-            role="tab"
-            :aria-selected="menuStore.activeCategoryId === null"
-            class="min-h-[44px] px-5 rounded-[var(--radius-pill)] text-base font-semibold transition-ui whitespace-nowrap cursor-pointer shrink-0"
+            :aria-pressed="menuStore.activeCategoryId === null"
+            class="min-h-[44px] px-4 rounded-[var(--radius-input)] text-sm font-semibold transition-ui whitespace-nowrap cursor-pointer shrink-0 border"
             :class="
               menuStore.activeCategoryId === null
-                ? 'bg-[var(--color-ink)] text-[var(--color-surface)]'
-                : 'bg-[var(--color-surface)] text-[var(--color-ink)] border border-[var(--color-line)] hover:border-[var(--color-line-strong)]'
+                ? 'bg-[var(--color-ink)] text-[var(--color-surface)] border-[var(--color-ink)]'
+                : 'bg-[var(--color-surface)] text-[var(--color-ink)] border-[var(--color-line)] hover:border-[var(--color-line-strong)]'
             "
             @click="menuStore.setCategory(null)"
           >
@@ -110,13 +99,12 @@
             v-for="cat in menuStore.categories"
             :key="cat.id"
             type="button"
-            role="tab"
-            :aria-selected="menuStore.activeCategoryId === cat.id"
-            class="min-h-[44px] px-5 rounded-[var(--radius-pill)] text-base font-semibold transition-ui whitespace-nowrap cursor-pointer shrink-0"
+            :aria-pressed="menuStore.activeCategoryId === cat.id"
+            class="min-h-[44px] px-4 rounded-[var(--radius-input)] text-sm font-semibold transition-ui whitespace-nowrap cursor-pointer shrink-0 border"
             :class="
               menuStore.activeCategoryId === cat.id
-                ? 'bg-[var(--color-ink)] text-[var(--color-surface)]'
-                : 'bg-[var(--color-surface)] text-[var(--color-ink)] border border-[var(--color-line)] hover:border-[var(--color-line-strong)]'
+                ? 'bg-[var(--color-ink)] text-[var(--color-surface)] border-[var(--color-ink)]'
+                : 'bg-[var(--color-surface)] text-[var(--color-ink)] border-[var(--color-line)] hover:border-[var(--color-line-strong)]'
             "
             @click="menuStore.setCategory(cat.id)"
           >
@@ -126,7 +114,15 @@
       </section>
 
       <!-- Menu Catalog Grid (One-tap add — zero popups) -->
-      <section aria-label="Menu items" class="flex-1 min-h-[680px]">
+      <section aria-labelledby="pos-menu-heading" class="flex-1 min-h-[680px]">
+        <div class="flex items-baseline justify-between gap-2 mb-3">
+          <h2 id="pos-menu-heading" class="label-tracked text-[var(--color-muted)]">
+            Menu dishes
+          </h2>
+          <span class="text-xs text-[var(--color-muted)] tabular-nums">
+            {{ displayedItems.length }} {{ displayedItems.length === 1 ? 'dish' : 'dishes' }}
+          </span>
+        </div>
         <div
           v-if="menuStore.isLoading && menuStore.items.length === 0"
           class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"
@@ -223,13 +219,12 @@
       class="lg:hidden fixed inset-x-0 md:left-[76px] bottom-[66px] md:bottom-0 z-30 px-4 pb-3 md:pb-4 safe-pb-bar pointer-events-none"
     >
       <button
-        ref="mobileSummaryRef"
         type="button"
-        class="pointer-events-auto w-full max-w-xl mx-auto min-h-[56px] px-5 py-3 rounded-[var(--radius-pill)] bg-[var(--color-sidebar)] text-[var(--color-sidebar-ink)] shadow-[var(--shadow-float)] flex items-center justify-between gap-3 active:translate-y-px transition-ui cursor-pointer"
+        class="pointer-events-auto w-full max-w-xl mx-auto min-h-[54px] px-4 py-3 rounded-[var(--radius-card)] bg-[var(--color-sidebar)] text-[var(--color-sidebar-ink)] shadow-[var(--shadow-float)] border border-[var(--color-sidebar-line)] flex items-center justify-between gap-3 active:translate-y-px transition-ui cursor-pointer"
         @click="isMobileSheetOpen = true"
       >
         <span class="flex items-center gap-2.5 text-base font-semibold min-w-0">
-          <span class="min-w-[26px] h-[26px] px-2 rounded-[var(--radius-pill)] bg-[var(--color-accent)] text-[var(--color-surface)] text-sm font-bold tabular-nums inline-flex items-center justify-center">
+          <span class="min-w-[26px] h-[26px] px-2 rounded-[var(--radius-input)] bg-[var(--color-accent)] text-[var(--color-surface)] font-mono text-xs font-bold tabular-nums inline-flex items-center justify-center">
             {{ cartStore.itemCount }}
           </span>
           <span class="truncate">
@@ -269,17 +264,6 @@
         @cancel-edit="handleCancelEdit"
       />
     </BaseSheet>
-
-    <!-- Subtle Flying Add Indicator -->
-    <div
-      v-for="dot in flyingDots"
-      :key="dot.id"
-      class="fixed z-[1100] w-5 h-5 -ml-2.5 -mt-2.5 rounded-[var(--radius-pill)] bg-[var(--color-accent)] text-[var(--color-surface)] flex items-center justify-center pointer-events-none transition-all duration-300 ease-out"
-      :style="dot.style"
-      aria-hidden="true"
-    >
-      <BaseIcon name="plus" :size="12" />
-    </div>
   </div>
 </template>
 
@@ -293,7 +277,7 @@ import { useCartStore } from '@/stores/cart'
 import { useOrdersStore } from '@/stores/orders'
 import { useToastStore } from '@/stores/toast'
 import type { MenuItem } from '@/types'
-import { formatCurrency, getManilaGreeting } from '@/utils/format'
+import { formatCurrency, formatTableLabel, getManilaGreeting } from '@/utils/format'
 import { executeViewTransition } from '@/utils/transition'
 import BaseCombobox from '@/components/base/BaseCombobox.vue'
 import type { ComboboxOption } from '@/components/base/BaseCombobox.vue'
@@ -303,11 +287,6 @@ import BaseIcon from '@/components/icons/BaseIcon.vue'
 import MenuCard from '@/components/MenuCard.vue'
 import OrderPanel from '@/components/OrderPanel.vue'
 import TableStatusStrip from '@/components/TableStatusStrip.vue'
-
-interface FlyingDot {
-  id: number
-  style: Record<string, string>
-}
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -320,9 +299,6 @@ const toastStore = useToastStore()
 const searchQuery = ref<string | number | null>('')
 const isMobileSheetOpen = ref(false)
 const orderPanelRef = ref<HTMLElement | null>(null)
-const mobileSummaryRef = ref<HTMLElement | null>(null)
-const flyingDots = ref<FlyingDot[]>([])
-let dotSeq = 0
 
 onMounted(async () => {
   // Enforce Step 1 (Choose a Table) before taking an order — never silently default to Table 1
@@ -348,10 +324,7 @@ const selectedTableActiveOrder = computed(() => {
   return ordersStore.getOrderByTableId(cartStore.selectedTableId) ?? null
 })
 
-const friendlyTableName = (tableNumber: string) => {
-  const num = Number(tableNumber.replace(/\D/g, ''))
-  return Number.isFinite(num) && num > 0 ? `Table ${num}` : tableNumber
-}
+const friendlyTableName = formatTableLabel
 
 const tableOptions = computed<ComboboxOption[]>(() =>
   tablesStore.tables.map((t) => {
@@ -448,48 +421,8 @@ const resetFilters = () => {
   menuStore.setCategory(null)
 }
 
-const triggerOriginFly = (originX: number, originY: number) => {
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
-
-  const targetEl =
-    window.innerWidth >= 1024 ? orderPanelRef.value : mobileSummaryRef.value
-  const targetRect = targetEl?.getBoundingClientRect()
-  const destX = targetRect ? targetRect.left + Math.min(80, targetRect.width / 2) : window.innerWidth - 120
-  const destY = targetRect ? targetRect.top + 48 : window.innerHeight - 60
-
-  const id = ++dotSeq
-  const dot: FlyingDot = {
-    id,
-    style: {
-      left: `${originX}px`,
-      top: `${originY}px`,
-      transform: 'scale(1)',
-      opacity: '1',
-    },
-  }
-  flyingDots.value.push(dot)
-
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      const active = flyingDots.value.find((d) => d.id === id)
-      if (!active) return
-      active.style = {
-        left: `${destX}px`,
-        top: `${destY}px`,
-        transform: 'scale(0.55)',
-        opacity: '0',
-      }
-    })
-  })
-
-  window.setTimeout(() => {
-    flyingDots.value = flyingDots.value.filter((d) => d.id !== id)
-  }, 320)
-}
-
 const handleQuickAdd = (payload: { item: MenuItem; originX: number; originY: number }) => {
   cartStore.addItem(payload.item)
-  triggerOriginFly(payload.originX, payload.originY)
 }
 
 const handleCancelEdit = () => {

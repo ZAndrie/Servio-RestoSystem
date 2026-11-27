@@ -1,5 +1,5 @@
 <template>
-  <main class="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-6xl w-full mx-auto space-y-6">
+  <main class="flex-1 px-4 sm:px-6 lg:px-8 py-5 max-w-6xl w-full mx-auto space-y-5">
     <!-- Header -->
     <header class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
       <div class="space-y-1">
@@ -24,32 +24,65 @@
     <!-- Date Range Bar -->
     <section
       aria-label="Date range"
-      class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-[var(--radius-card)] bg-[var(--color-surface)] border border-[var(--color-line)]"
+      class="px-4 py-3 rounded-[var(--radius-card)] bg-[var(--color-surface)] border border-[var(--color-line)] space-y-2.5"
     >
-      <div class="flex flex-wrap items-center gap-3 text-sm">
-        <span class="label-tracked text-[var(--color-muted)]">Date range</span>
-        <div class="flex items-center gap-2">
-          <label for="report-start" class="sr-only">Start date</label>
-          <input
-            id="report-start"
-            v-model="startDate"
-            type="date"
-            class="min-h-[44px] px-3 rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] text-sm font-semibold tabular-nums text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
-          />
-          <span class="text-[var(--color-muted)]">to</span>
-          <label for="report-end" class="sr-only">End date</label>
-          <input
-            id="report-end"
-            v-model="endDate"
-            type="date"
-            class="min-h-[44px] px-3 rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] text-sm font-semibold tabular-nums text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
-          />
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-3 text-sm">
+          <span class="label-tracked text-[var(--color-muted)]">Date range</span>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <div class="flex items-center gap-1.5">
+              <label for="report-start" class="text-xs font-semibold text-[var(--color-muted)]">
+                From
+              </label>
+              <input
+                id="report-start"
+                v-model="startDate"
+                type="date"
+                :aria-invalid="isInvalidRange ? 'true' : undefined"
+                :aria-describedby="isInvalidRange ? 'date-range-error' : undefined"
+                class="min-h-[44px] px-3 rounded-[var(--radius-input)] bg-[var(--color-bg)] border text-sm font-semibold tabular-nums text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+                :class="isInvalidRange ? 'border-[var(--color-berry)]' : 'border-[var(--color-line)]'"
+              />
+            </div>
+            <div class="flex items-center gap-1.5">
+              <label for="report-end" class="text-xs font-semibold text-[var(--color-muted)]">
+                To
+              </label>
+              <input
+                id="report-end"
+                v-model="endDate"
+                type="date"
+                :aria-invalid="isInvalidRange ? 'true' : undefined"
+                :aria-describedby="isInvalidRange ? 'date-range-error' : undefined"
+                class="min-h-[44px] px-3 rounded-[var(--radius-input)] bg-[var(--color-bg)] border text-sm font-semibold tabular-nums text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+                :class="isInvalidRange ? 'border-[var(--color-berry)]' : 'border-[var(--color-line)]'"
+              />
+            </div>
+          </div>
         </div>
+
+        <span class="text-sm text-[var(--color-muted)]">
+          Manila time
+        </span>
       </div>
 
-      <span class="text-sm text-[var(--color-muted)]">
-        Manila time
-      </span>
+      <div
+        v-if="isInvalidRange"
+        id="date-range-error"
+        role="alert"
+        class="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-[var(--radius-input)] bg-[var(--color-berry-bg)] border border-[var(--color-berry)]/40 text-sm text-[var(--color-berry-ink)]"
+      >
+        <span class="font-semibold">
+          Start date cannot be later than end date. Showing no orders until corrected.
+        </span>
+        <button
+          type="button"
+          class="min-h-[44px] px-3 rounded-[var(--radius-pill)] bg-[var(--color-surface)] border border-[var(--color-berry)]/40 text-xs font-bold text-[var(--color-berry-ink)] hover:bg-[var(--color-bg)] transition-ui cursor-pointer shrink-0"
+          @click="resetDateRange"
+        >
+          Reset to today
+        </button>
+      </div>
     </section>
 
     <!-- Unified KPI Strip -->
@@ -107,7 +140,7 @@
           </div>
           <button
             type="button"
-            class="touch-extend-44 px-3 py-1.5 rounded-[var(--radius-pill)] text-sm font-bold text-[var(--color-accent)] hover:bg-[var(--color-accent-subtle)] transition-ui cursor-pointer"
+            class="min-h-[44px] inline-flex items-center px-3 rounded-[var(--radius-input)] text-sm font-semibold text-[var(--color-accent)] hover:bg-[var(--color-accent-subtle)] transition-ui cursor-pointer shrink-0"
             :aria-expanded="showPaymentDetail"
             @click="showPaymentDetail = !showPaymentDetail"
           >
@@ -131,9 +164,9 @@
                 <span class="text-xs text-[var(--color-muted)] ml-1">({{ row.percent }}%)</span>
               </span>
             </div>
-            <div class="h-2 rounded-[var(--radius-pill)] bg-[var(--color-surface-alt)] overflow-hidden">
+            <div class="h-1.5 rounded-[2px] bg-[var(--color-line)]/75 overflow-hidden">
               <div
-                class="h-full rounded-[var(--radius-pill)] transition-ui"
+                class="h-full rounded-[2px] transition-ui"
                 :class="row.barClass"
                 :style="{ width: `${row.percent}%` }"
               />
@@ -156,7 +189,7 @@
               <tbody class="divide-y divide-[var(--color-line)]/70">
                 <tr v-for="order in paidOrders" :key="order.id">
                   <td class="py-2.5 font-mono tabular-nums text-[var(--color-ink)]">
-                    {{ order.order_ref }} · {{ friendlyTableName(order.table_number) }}
+                    {{ order.order_ref }} · {{ formatTableLabel(order.table_number) }}
                   </td>
                   <td class="py-2.5 uppercase text-[var(--color-muted)]">
                     {{ order.payment_method }}
@@ -185,7 +218,7 @@
           <button
             v-if="topDishes.length > 3"
             type="button"
-            class="touch-extend-44 px-3 py-1.5 rounded-[var(--radius-pill)] text-sm font-semibold text-[var(--color-accent)] hover:bg-[var(--color-accent-subtle)] transition-ui cursor-pointer"
+            class="min-h-[44px] inline-flex items-center px-3 rounded-[var(--radius-input)] text-sm font-semibold text-[var(--color-accent)] hover:bg-[var(--color-accent-subtle)] transition-ui cursor-pointer shrink-0"
             :aria-expanded="showAllDishes"
             @click="showAllDishes = !showAllDishes"
           >
@@ -245,43 +278,81 @@
         Nothing cooking yet — dining room is quiet.
       </div>
 
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-base text-left">
-          <thead>
-            <tr class="border-b border-[var(--color-line)] bg-[var(--color-bg)]/70 text-xs uppercase text-[var(--color-muted)]">
-              <th class="py-3 px-5 font-semibold">Table</th>
-              <th class="py-3 px-5 font-semibold">Order</th>
-              <th class="py-3 px-5 font-semibold">Server</th>
-              <th class="py-3 px-5 font-semibold">Status</th>
-              <th class="py-3 px-5 font-semibold text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[var(--color-line)]">
-            <tr v-for="order in ordersStore.activeOrders" :key="order.id">
-              <td class="py-3.5 px-5 font-semibold tabular-nums text-[var(--color-ink)]">
-                {{ friendlyTableName(order.table_number) }}
-              </td>
-              <td class="py-3.5 px-5 font-mono text-sm tabular-nums text-[var(--color-muted)]">
-                {{ order.order_ref }}
-              </td>
-              <td class="py-3.5 px-5 text-[var(--color-ink)]">
-                {{ order.server_name }}
-              </td>
-              <td class="py-3.5 px-5">
-                <span
-                  v-if="order.payment_status === 'unpaid'"
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-[var(--radius-pill)] bg-[var(--color-honey-bg)] text-[var(--color-honey-ink)] border border-[var(--color-honey)]/50 label-tracked"
-                >
-                  Unpaid
-                </span>
-                <StatusBadge v-else :status="order.status" compact />
-              </td>
-              <td class="py-3.5 px-5 text-right font-semibold tabular-nums text-[var(--color-ink)]">
+      <div v-else>
+        <!-- Mobile (< 768px) stacked cards — zero horizontal table scrolling -->
+        <ul class="md:hidden divide-y divide-[var(--color-line)]">
+          <li
+            v-for="order in ordersStore.activeOrders"
+            :key="`mob-${order.id}`"
+            class="p-4 space-y-2"
+          >
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <p class="font-semibold text-base text-[var(--color-ink)] tabular-nums">
+                  {{ formatTableLabel(order.table_number) }}
+                </p>
+                <p class="font-mono text-xs tabular-nums text-[var(--color-muted)]">
+                  {{ order.order_ref }} · {{ order.server_name }}
+                </p>
+              </div>
+              <span
+                v-if="order.payment_status === 'unpaid'"
+                class="inline-flex items-center px-2.5 py-0.5 rounded-[var(--radius-input)] bg-[var(--color-honey-bg)] text-[var(--color-honey-ink)] border border-[var(--color-honey)]/50 label-tracked shrink-0"
+              >
+                Unpaid
+              </span>
+              <StatusBadge v-else :status="order.status" compact />
+            </div>
+            <div class="flex items-center justify-between text-sm pt-1 border-t border-[var(--color-line)]/60">
+              <span class="text-[var(--color-muted)]">
+                {{ order.items.reduce((sum, i) => sum + i.quantity, 0) }} items
+              </span>
+              <span class="font-semibold tabular-nums text-[var(--color-ink)]">
                 {{ formatCurrency(order.total) }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </span>
+            </div>
+          </li>
+        </ul>
+
+        <!-- Tablet / Desktop Table -->
+        <div class="hidden md:block overflow-x-auto">
+          <table class="w-full text-base text-left">
+            <thead>
+              <tr class="border-b border-[var(--color-line)] bg-[var(--color-bg)]/70 text-xs uppercase text-[var(--color-muted)]">
+                <th class="py-3 px-5 font-semibold">Table</th>
+                <th class="py-3 px-5 font-semibold">Order</th>
+                <th class="py-3 px-5 font-semibold">Server</th>
+                <th class="py-3 px-5 font-semibold">Status</th>
+                <th class="py-3 px-5 font-semibold text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[var(--color-line)]">
+              <tr v-for="order in ordersStore.activeOrders" :key="order.id">
+                <td class="py-3.5 px-5 font-semibold tabular-nums text-[var(--color-ink)]">
+                  {{ formatTableLabel(order.table_number) }}
+                </td>
+                <td class="py-3.5 px-5 font-mono text-sm tabular-nums text-[var(--color-muted)]">
+                  {{ order.order_ref }}
+                </td>
+                <td class="py-3.5 px-5 text-[var(--color-ink)]">
+                  {{ order.server_name }}
+                </td>
+                <td class="py-3.5 px-5">
+                  <span
+                    v-if="order.payment_status === 'unpaid'"
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-[var(--radius-input)] bg-[var(--color-honey-bg)] text-[var(--color-honey-ink)] border border-[var(--color-honey)]/50 label-tracked"
+                  >
+                    Unpaid
+                  </span>
+                  <StatusBadge v-else :status="order.status" compact />
+                </td>
+                <td class="py-3.5 px-5 text-right font-semibold tabular-nums text-[var(--color-ink)]">
+                  {{ formatCurrency(order.total) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
   </main>
@@ -293,7 +364,12 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useOrdersStore } from '@/stores/orders'
 import { useTablesStore } from '@/stores/tables'
-import { formatCurrency, getManilaDateISO, getManilaGreeting } from '@/utils/format'
+import {
+  formatCurrency,
+  formatTableLabel,
+  getManilaDateISO,
+  getManilaGreeting,
+} from '@/utils/format'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import StatusBadge from '@/components/base/StatusBadge.vue'
@@ -307,6 +383,15 @@ const tablesStore = useTablesStore()
 const todayIso = getManilaDateISO()
 const startDate = ref(todayIso)
 const endDate = ref(todayIso)
+
+const isInvalidRange = computed(() =>
+  Boolean(startDate.value && endDate.value && startDate.value > endDate.value),
+)
+
+const resetDateRange = () => {
+  startDate.value = todayIso
+  endDate.value = todayIso
+}
 
 const isReportRoute = computed(() => Boolean(route.meta.reportFocus))
 const showPaymentDetail = ref(false)
@@ -332,11 +417,6 @@ onUnmounted(() => {
 
 const greeting = computed(() => getManilaGreeting(authStore.user?.name))
 
-const friendlyTableName = (tableNumber: string) => {
-  const num = Number((tableNumber || '').replace(/\D/g, ''))
-  return Number.isFinite(num) && num > 0 ? `Table ${num}` : tableNumber
-}
-
 const salesPeriodLabel = computed(() =>
   startDate.value === todayIso && endDate.value === todayIso
     ? "Today's sales"
@@ -353,6 +433,7 @@ const todayLabel = computed(() =>
 )
 
 const paidOrders = computed(() => {
+  if (isInvalidRange.value) return []
   const start = startDate.value
   const end = endDate.value
   return ordersStore.paidOrders.filter((order) => {
@@ -378,14 +459,13 @@ const methodBreakdown = computed(() => {
     else if (o.payment_method === 'gcash') sums.gcash += o.total
     else if (o.payment_method === 'card') sums.card += o.total
   }
-  const grand = Math.max(1, totalRevenue.value)
-  return [
+
+  const baseRows = [
     {
       key: 'cash',
       label: 'Cash',
       icon: 'cash',
       amount: sums.cash,
-      percent: totalRevenue.value > 0 ? Math.round((sums.cash / grand) * 100) : 0,
       barClass: 'bg-[var(--color-leaf)]',
     },
     {
@@ -393,7 +473,6 @@ const methodBreakdown = computed(() => {
       label: 'GCash',
       icon: 'smartphone',
       amount: sums.gcash,
-      percent: totalRevenue.value > 0 ? Math.round((sums.gcash / grand) * 100) : 0,
       barClass: 'bg-[var(--color-accent)]',
     },
     {
@@ -401,10 +480,41 @@ const methodBreakdown = computed(() => {
       label: 'Card',
       icon: 'credit-card',
       amount: sums.card,
-      percent: totalRevenue.value > 0 ? Math.round((sums.card / grand) * 100) : 0,
       barClass: 'bg-[var(--color-pot)]',
     },
   ]
+
+  const total = totalRevenue.value
+  if (total <= 0) {
+    return baseRows.map((row) => ({ ...row, percent: 0 }))
+  }
+
+  // Largest-remainder rounding guarantees Cash + GCash + Card always sum to 100%
+  const raw = baseRows.map((row) => {
+    const exact = (row.amount / total) * 100
+    const floor = Math.floor(exact)
+    return {
+      ...row,
+      percent: floor,
+      remainder: exact - floor,
+    }
+  })
+
+  let remainderPoints = 100 - raw.reduce((sum, row) => sum + row.percent, 0)
+  const order = raw
+    .map((row, index) => ({ index, remainder: row.remainder, amount: row.amount }))
+    .sort((a, b) => b.remainder - a.remainder || b.amount - a.amount)
+
+  for (const item of order) {
+    if (remainderPoints <= 0) break
+    const target = raw[item.index]
+    if (target) {
+      target.percent += 1
+      remainderPoints -= 1
+    }
+  }
+
+  return raw.map(({ remainder: _remainder, ...row }) => row)
 })
 
 const topDishes = computed(() => {

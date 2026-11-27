@@ -31,8 +31,8 @@
         class="w-full min-h-[44px] bg-[var(--color-surface)] border border-[var(--color-line)] text-[var(--color-ink)] placeholder:text-[var(--color-muted)] transition-ui focus:border-[var(--color-accent)] focus:outline-none"
         :class="[
           variant === 'pill'
-            ? 'rounded-[var(--radius-pill)] pl-10 pr-10 py-2 text-base font-medium'
-            : 'rounded-[var(--radius-pill)] pl-11 pr-11 py-2.5 text-base',
+            ? 'rounded-[var(--radius-input)] pl-10 pr-10 py-2 text-sm font-medium'
+            : 'rounded-[var(--radius-input)] pl-11 pr-11 py-2.5 text-base',
           inputClass,
         ]"
         @focus="openDropdown"
@@ -40,11 +40,11 @@
         @keydown="handleKeyDown"
       />
 
-      <!-- Clear or Chevron button (Term 2 optical centre & Term 8 44px touch target) -->
+      <!-- Clear or Chevron button (44px accessible touch target) -->
       <button
         v-if="allowClear && query"
         type="button"
-        class="touch-extend-44 absolute right-2 z-10 w-8 h-8 rounded-[var(--radius-pill)] flex items-center justify-center text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-alt)] transition-ui cursor-pointer"
+        class="touch-extend-44 absolute right-1 z-10 w-10 h-10 rounded-[var(--radius-pill)] flex items-center justify-center text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-alt)] transition-ui cursor-pointer"
         aria-label="Clear search"
         @click="clearSelection"
       >
@@ -54,7 +54,7 @@
         v-else
         type="button"
         tabindex="-1"
-        class="touch-extend-44 absolute right-2 z-10 w-8 h-8 rounded-[var(--radius-pill)] flex items-center justify-center text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-ui cursor-pointer"
+        class="touch-extend-44 absolute right-1 z-10 w-10 h-10 rounded-[var(--radius-pill)] flex items-center justify-center text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-ui cursor-pointer"
         :aria-label="isOpen ? 'Close options' : 'Open options'"
         @click="toggleOpen"
       >

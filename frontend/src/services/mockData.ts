@@ -110,7 +110,7 @@ export const MOCK_MENU_ITEMS: MenuItem[] = [
     description: 'Home-style chicken simmered in coconut milk, mild curry, peppers, and potatoes.',
     price: 260.0,
     is_available: false, // Sold out initially so staff can see Sold Out state clearly
-    image: '/Dishes/Chicken Curry.jpg',
+    image: undefined, // Removed watermarked stock photo; falls back to clean DishArtwork illustration until uploaded
     artwork: 'bowl',
   },
 

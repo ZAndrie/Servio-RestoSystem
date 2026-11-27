@@ -1,5 +1,14 @@
 <template>
   <div class="min-h-[100dvh] flex bg-[var(--color-bg)] text-[var(--color-ink)]">
+    <!-- WCAG 2.4.1 Skip to Main Content -->
+    <a
+      v-if="showNavigation"
+      href="#app-main-content"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[200] focus:px-4 focus:py-2.5 focus:rounded-[var(--radius-pill)] focus:bg-[var(--color-accent)] focus:text-[var(--color-surface)] focus:font-bold focus:text-sm focus:shadow-lg"
+    >
+      Skip to main content
+    </a>
+
     <!-- Desktop (228px) & Tablet (76px icon rail) Dark Charcoal-Brown Sidebar -->
     <aside
       v-if="showNavigation"
@@ -24,13 +33,14 @@
           </span>
         </router-link>
 
-        <nav class="flex flex-col gap-2" aria-label="Workspace screens">
+        <nav class="flex flex-col gap-1" aria-label="Workspace screens">
           <router-link
             v-for="item in navItems"
             :key="item.to"
             :to="item.to"
             :title="item.label"
-            class="group relative flex items-center justify-center xl:justify-start gap-2.5 min-h-[44px] px-3 xl:px-3.5 rounded-[var(--radius-pill)] text-base font-semibold transition-ui"
+            :aria-label="item.badge && item.badge > 0 ? `${item.label} (${item.badge})` : item.label"
+            class="group relative flex items-center justify-center xl:justify-start gap-2.5 min-h-[44px] px-3 xl:px-3.5 rounded-[var(--radius-input)] text-sm font-semibold transition-ui"
             :class="
               isNavActive(item)
                 ? 'bg-[var(--color-accent)] text-[var(--color-surface)]'
@@ -38,24 +48,26 @@
             "
             :aria-current="isNavActive(item) ? 'page' : undefined"
           >
-            <span class="inline-flex items-center justify-center optical-nav-icon shrink-0">
-              <BaseIcon :name="item.icon" :size="19" />
+            <span class="inline-flex items-center justify-center optical-nav-icon shrink-0" aria-hidden="true">
+              <BaseIcon :name="item.icon" :size="18" />
             </span>
             <span class="hidden xl:inline truncate">{{ item.label }}</span>
             <span
               v-if="item.badge && item.badge > 0"
-              class="hidden xl:inline-flex ml-auto min-w-[22px] h-[22px] px-1.5 items-center justify-center rounded-[var(--radius-pill)] text-xs font-bold tabular-nums"
+              aria-hidden="true"
+              class="hidden xl:inline-flex ml-auto min-w-[20px] h-[20px] px-1.5 items-center justify-center rounded-[var(--radius-input)] font-mono text-xs font-bold tabular-nums"
               :class="
                 isNavActive(item)
                   ? 'bg-[var(--color-surface)]/20 text-[var(--color-surface)]'
-                  : 'bg-[var(--color-leaf)]/25 text-[var(--color-kds-leaf)]'
+                  : 'bg-[var(--color-sidebar-surface)] text-[var(--color-kds-leaf)]'
               "
             >
               {{ item.badge }}
             </span>
             <span
               v-if="item.badge && item.badge > 0"
-              class="xl:hidden absolute top-1 right-1 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-[var(--radius-pill)] text-[10px] font-bold tabular-nums bg-[var(--color-leaf)] text-[var(--color-kds-bg)]"
+              aria-hidden="true"
+              class="xl:hidden absolute top-1 right-1 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-[var(--radius-pill)] text-[10px] font-bold tabular-nums bg-[var(--color-kds-leaf)] text-[var(--color-kds-bg)]"
             >
               {{ item.badge }}
             </span>
@@ -63,25 +75,20 @@
         </nav>
       </div>
 
-      <!-- Bottom Warm Tagline + Sign Out -->
-      <div class="space-y-4">
-        <div
-          class="hidden xl:flex flex-col items-center text-center px-3 py-4 rounded-[var(--radius-card)] bg-[var(--color-sidebar-surface)] border border-[var(--color-sidebar-line)]"
-        >
-          <div
-            class="w-11 h-11 rounded-[var(--radius-pill)] bg-[var(--color-sidebar)] border border-[var(--color-sidebar-line)] flex items-center justify-center text-[var(--color-accent-soft)] mb-2.5"
-            aria-hidden="true"
-          >
-            <BaseIcon name="cloche" :size="22" custom-class="optical-cloche" />
-          </div>
-          <p class="font-display text-sm text-[var(--color-sidebar-ink)] leading-snug text-balance">
-            Cooked to order, served warm.
+      <!-- Bottom Staff Shift Info + Sign Out (Useful info, no decorative filler card) -->
+      <div class="pt-4 border-t border-[var(--color-sidebar-line)] space-y-2">
+        <div class="hidden xl:block px-2.5 pb-1">
+          <p class="text-sm font-semibold text-[var(--color-sidebar-ink)] truncate">
+            {{ authStore.user?.name || 'Staff on duty' }}
+          </p>
+          <p class="font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--color-sidebar-muted)] mt-0.5">
+            {{ authStore.role || 'station' }}
           </p>
         </div>
 
         <button
           type="button"
-          class="w-full min-h-[44px] px-3 xl:px-4 rounded-[var(--radius-pill)] flex items-center justify-center xl:justify-start gap-3 text-sm font-semibold text-[var(--color-sidebar-muted)] hover:text-[var(--color-sidebar-ink)] hover:bg-[var(--color-sidebar-surface)] transition-ui cursor-pointer"
+          class="w-full min-h-[44px] px-3 xl:px-3.5 rounded-[var(--radius-input)] flex items-center justify-center xl:justify-start gap-2.5 text-sm font-semibold text-[var(--color-sidebar-muted)] hover:text-[var(--color-sidebar-ink)] hover:bg-[var(--color-sidebar-surface)] transition-ui cursor-pointer"
           aria-label="Sign out"
           title="Sign out"
           @click="handleLogout"
@@ -94,7 +101,9 @@
 
     <!-- Main Content Outlet -->
     <div
-      class="flex-1 min-w-0 flex flex-col"
+      id="app-main-content"
+      tabindex="-1"
+      class="flex-1 min-w-0 flex flex-col focus:outline-none"
       :class="showNavigation ? 'pb-[72px] md:pb-0' : ''"
     >
       <slot />
@@ -111,7 +120,7 @@
           v-for="item in navItems"
           :key="item.to"
           :to="item.to"
-          class="relative flex-1 min-h-[48px] px-1.5 py-1.5 rounded-[var(--radius-pill)] flex flex-col items-center justify-center gap-0.5 text-xs font-semibold transition-ui"
+          class="relative flex-1 min-h-[48px] px-1.5 py-1.5 rounded-[var(--radius-input)] flex flex-col items-center justify-center gap-0.5 text-xs font-semibold transition-ui"
           :class="
             isNavActive(item)
               ? 'bg-[var(--color-accent)] text-[var(--color-surface)]'
@@ -123,7 +132,7 @@
           <span class="truncate max-w-full">{{ item.shortLabel || item.label }}</span>
           <span
             v-if="item.badge && item.badge > 0"
-            class="absolute top-1 right-1.5 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-[var(--radius-pill)] text-[10px] font-bold tabular-nums bg-[var(--color-leaf)] text-[var(--color-kds-bg)]"
+            class="absolute top-1 right-1.5 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-[var(--radius-pill)] text-[10px] font-bold tabular-nums bg-[var(--color-kds-leaf)] text-[var(--color-kds-bg)]"
           >
             {{ item.badge }}
           </span>
@@ -131,7 +140,7 @@
 
         <button
           type="button"
-          class="min-w-[48px] min-h-[48px] px-1.5 py-1.5 rounded-[var(--radius-pill)] flex flex-col items-center justify-center gap-0.5 text-xs font-semibold text-[var(--color-sidebar-muted)] hover:text-[var(--color-sidebar-ink)] transition-ui cursor-pointer"
+          class="min-w-[48px] min-h-[48px] px-1.5 py-1.5 rounded-[var(--radius-input)] flex flex-col items-center justify-center gap-0.5 text-xs font-semibold text-[var(--color-sidebar-muted)] hover:text-[var(--color-sidebar-ink)] transition-ui cursor-pointer"
           aria-label="Sign out"
           @click="handleLogout"
         >

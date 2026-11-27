@@ -12,11 +12,18 @@ import '@fontsource/geist-mono/500.css'
 import '@fontsource/geist-mono/600.css'
 
 import { registerPlugins } from '@/plugins'
+import { useAuthStore } from '@/stores/auth'
 import App from './App.vue'
 import './tailwind.css'
 
 const app = createApp(App)
 
 registerPlugins(app)
+
+// Re-verify persisted auth token/role on startup (clears stale or tampered sessions)
+const authStore = useAuthStore()
+if (authStore.isAuthenticated) {
+  void authStore.verifySession()
+}
 
 app.mount('#app')

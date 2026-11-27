@@ -1,39 +1,31 @@
 <template>
-  <main class="relative min-h-[100dvh] flex items-center justify-center p-4 sm:p-6 safe-pb overflow-hidden bg-[var(--color-bg)]">
-    <!-- Single faint organic leaf backdrop accent (calm, subtle, zero glow) -->
-    <svg
-      class="pointer-events-none select-none fixed -top-16 -right-16 w-[380px] h-[380px] text-[var(--color-leaf)] opacity-[0.07] blur-[2px]"
-      viewBox="0 0 240 240"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M210 30C125 35 60 85 40 190c95-15 160-72 170-160Z" />
-    </svg>
-
+  <main class="min-h-[100dvh] flex items-center justify-center p-4 sm:p-6 safe-pb bg-[var(--color-bg)]">
     <section
-      class="relative w-full max-w-[420px] bg-[var(--color-surface)] border border-[var(--color-line)] rounded-[var(--radius-card)] p-6 sm:p-8 space-y-6"
+      class="w-full max-w-[440px] bg-[var(--color-surface)] border border-[var(--color-line)] rounded-[var(--radius-card)] p-6 sm:p-8 space-y-6"
       aria-labelledby="login-heading"
     >
-      <!-- Back to Homepage Link -->
-      <div class="flex items-center justify-between pb-1">
+      <!-- Top Utility Bar -->
+      <div class="flex items-center justify-between pb-4 border-b border-[var(--color-line)]">
         <router-link
           to="/"
-          class="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-ui"
+          class="min-h-[44px] -ml-2 px-2 inline-flex items-center gap-1.5 rounded-[var(--radius-input)] text-sm font-semibold text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-ui"
         >
-          <BaseIcon name="arrow-left" :size="14" />
+          <BaseIcon name="arrow-left" :size="15" />
           <span>Back to Home</span>
         </router-link>
-        <span class="text-[11px] text-[var(--color-muted)] font-medium">Servio POS</span>
+        <span class="font-mono text-xs uppercase tracking-[0.06em] text-[var(--color-muted)]">
+          Staff Portal
+        </span>
       </div>
 
-      <!-- Brand Header (Term 1 manually kerned serif wordmark) -->
-      <header class="text-center space-y-2.5">
+      <!-- Left-Aligned Editorial Brand Header (Not generic centered SaaS card) -->
+      <header class="flex items-start gap-3.5">
         <img
           src="/servio-logo-icon.jpg"
           alt="Servio"
-          width="60"
-          height="60"
-          class="w-[60px] h-[60px] mx-auto rounded-[var(--radius-input)] object-cover border border-[var(--color-line)]"
+          width="48"
+          height="48"
+          class="w-12 h-12 rounded-[var(--radius-input)] object-cover border border-[var(--color-line)] shrink-0 mt-0.5"
         />
         <div class="space-y-1">
           <h1
@@ -42,8 +34,8 @@
           >
             Servio
           </h1>
-          <p class="text-sm text-[var(--color-muted)] text-pretty max-w-[34ch] mx-auto">
-            Dining room, kitchen, and cashier ordering made simple.
+          <p class="text-sm text-[var(--color-muted)] text-pretty">
+            Sign in to your dining room, kitchen, or owner station.
           </p>
         </div>
       </header>
@@ -52,6 +44,7 @@
       <form
         v-if="showPasswordUpdate"
         class="space-y-4"
+        novalidate
         @submit.prevent="handlePasswordUpdate"
       >
         <div class="p-3.5 rounded-[var(--radius-input)] bg-[var(--color-honey-bg)] border border-[var(--color-honey)]/50 text-[var(--color-honey-ink)] text-sm">
@@ -70,8 +63,20 @@
             minlength="6"
             autocomplete="new-password"
             placeholder="At least 6 characters"
-            class="w-full min-h-[48px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] text-base text-[var(--color-ink)] placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)] focus:outline-none transition-ui"
+            :aria-invalid="Boolean(newPasswordError)"
+            :aria-describedby="newPasswordError ? 'new-password-error' : undefined"
+            class="w-full min-h-[48px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border text-base text-[var(--color-ink)] placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)] focus:outline-none transition-ui"
+            :class="newPasswordError ? 'border-[var(--color-berry)]' : 'border-[var(--color-line)]'"
+            @input="newPasswordError = ''"
           />
+          <p
+            v-if="newPasswordError"
+            id="new-password-error"
+            role="alert"
+            class="text-xs font-semibold text-[var(--color-berry-ink)]"
+          >
+            {{ newPasswordError }}
+          </p>
         </div>
 
         <BaseButton
@@ -87,10 +92,13 @@
 
       <!-- Standard Sign-In -->
       <template v-else>
-        <!-- Quick Staff Demo Buttons (44px+ touch targets, 8px spacing) -->
-        <div class="p-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] space-y-2.5">
+        <!-- Quick Staff Demo Buttons: Strictly gated behind USE_MOCK (compiled out of production API builds) -->
+        <div
+          v-if="isMockMode"
+          class="p-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] space-y-2.5"
+        >
           <span class="block label-tracked text-[var(--color-muted)] text-center">
-            Tap your name to start
+            Offline Demo Mode · Tap your role
           </span>
           <div class="grid grid-cols-3 gap-2">
             <button
@@ -111,7 +119,7 @@
           </div>
         </div>
 
-        <form class="space-y-4" @submit.prevent="handleSubmit">
+        <form class="space-y-4" novalidate @submit.prevent="handleSubmit">
           <div
             v-if="authStore.error"
             role="alert"
@@ -130,9 +138,21 @@
               type="text"
               required
               autocomplete="username"
-              placeholder="waiter, admin, or kitchen"
-              class="w-full min-h-[48px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] text-base text-[var(--color-ink)] placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)] focus:outline-none transition-ui"
+              placeholder="Enter your staff username"
+              :aria-invalid="Boolean(fieldErrors.username)"
+              :aria-describedby="fieldErrors.username ? 'login-username-error' : undefined"
+              class="w-full min-h-[48px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border text-base text-[var(--color-ink)] placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)] focus:outline-none transition-ui"
+              :class="fieldErrors.username ? 'border-[var(--color-berry)]' : 'border-[var(--color-line)]'"
+              @input="fieldErrors.username = ''"
             />
+            <p
+              v-if="fieldErrors.username"
+              id="login-username-error"
+              role="alert"
+              class="text-xs font-semibold text-[var(--color-berry-ink)]"
+            >
+              {{ fieldErrors.username }}
+            </p>
           </div>
 
           <div class="space-y-1.5">
@@ -146,8 +166,20 @@
               required
               autocomplete="current-password"
               placeholder="Enter password"
-              class="w-full min-h-[48px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] text-base text-[var(--color-ink)] placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)] focus:outline-none transition-ui"
+              :aria-invalid="Boolean(fieldErrors.password)"
+              :aria-describedby="fieldErrors.password ? 'login-password-error' : undefined"
+              class="w-full min-h-[48px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border text-base text-[var(--color-ink)] placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)] focus:outline-none transition-ui"
+              :class="fieldErrors.password ? 'border-[var(--color-berry)]' : 'border-[var(--color-line)]'"
+              @input="fieldErrors.password = ''"
             />
+            <p
+              v-if="fieldErrors.password"
+              id="login-password-error"
+              role="alert"
+              class="text-xs font-semibold text-[var(--color-berry-ink)]"
+            >
+              {{ fieldErrors.password }}
+            </p>
           </div>
 
           <BaseButton
@@ -170,9 +202,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { USE_MOCK } from '@/services/api'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 
@@ -180,16 +213,26 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
+const isMockMode = USE_MOCK
 const username = ref('')
 const password = ref('')
 const showPasswordUpdate = ref(false)
 const newPassword = ref('')
+const newPasswordError = ref('')
 
-const demoStaff = [
-  { username: 'waiter', password: 'waiter123', firstName: 'Ana', roleLabel: 'Waiter' },
-  { username: 'kitchen', password: 'kitchen123', firstName: 'Ramon', roleLabel: 'Kitchen' },
-  { username: 'admin', password: 'admin123', firstName: 'Maria', roleLabel: 'Admin' },
-]
+const fieldErrors = reactive({
+  username: '',
+  password: '',
+})
+
+// Compiled only when USE_MOCK is true (tree-shaken out of production API builds)
+const demoStaff = USE_MOCK
+  ? [
+      { username: 'waiter', password: 'waiter123', firstName: 'Ana', roleLabel: 'Waiter' },
+      { username: 'kitchen', password: 'kitchen123', firstName: 'Ramon', roleLabel: 'Kitchen' },
+      { username: 'admin', password: 'admin123', firstName: 'Maria', roleLabel: 'Admin' },
+    ]
+  : []
 
 const navigateToLanding = () => {
   const redirect = route.query.redirect as string | undefined
@@ -213,18 +256,40 @@ const completeSignIn = async (user: string, pass: string) => {
   navigateToLanding()
 }
 
-const handleSubmit = () => completeSignIn(username.value, password.value)
+const handleSubmit = () => {
+  fieldErrors.username = ''
+  fieldErrors.password = ''
+  authStore.error = null
+
+  if (!username.value.trim()) {
+    fieldErrors.username = 'Please enter your username.'
+  }
+  if (!password.value) {
+    fieldErrors.password = 'Please enter your password.'
+  }
+  if (fieldErrors.username || fieldErrors.password) return
+
+  void completeSignIn(username.value.trim(), password.value)
+}
 
 const quickLogin = (roleUser: string) => {
+  if (!USE_MOCK) return
+  fieldErrors.username = ''
+  fieldErrors.password = ''
   const matched = demoStaff.find((d) => d.username === roleUser)
-  const demoPass = matched?.password || 'servio2026'
+  if (!matched) return
   username.value = roleUser
-  password.value = demoPass
-  completeSignIn(roleUser, demoPass)
+  password.value = matched.password
+  void completeSignIn(roleUser, matched.password)
 }
 
 const handlePasswordUpdate = async () => {
-  const ok = await authStore.changePassword(newPassword.value)
+  newPasswordError.value = ''
+  if (newPassword.value.trim().length < 6) {
+    newPasswordError.value = 'New password must be at least 6 characters.'
+    return
+  }
+  const ok = await authStore.changePassword(newPassword.value.trim())
   if (ok) navigateToLanding()
 }
 </script>

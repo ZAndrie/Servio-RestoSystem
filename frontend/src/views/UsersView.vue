@@ -11,7 +11,7 @@
         </p>
       </div>
 
-      <BaseButton variant="primary" size="md" icon="plus" @click="isAddModalOpen = true">
+      <BaseButton variant="primary" size="md" icon="plus" @click="openAddModal">
         Add Staff
       </BaseButton>
     </header>
@@ -137,7 +137,15 @@
       title="Register staff member"
       subtitle="New accounts prompt for a password change on first sign-in."
     >
-      <form id="staff-create-form" class="space-y-4" @submit.prevent="handleCreateUser">
+      <form id="staff-create-form" novalidate class="space-y-4" @submit.prevent="handleCreateUser">
+        <div
+          v-if="createErrors.server"
+          role="alert"
+          class="px-3.5 py-2.5 rounded-[var(--radius-input)] bg-[var(--color-berry-bg)] border border-[var(--color-berry)]/45 text-sm font-semibold text-[var(--color-berry-ink)]"
+        >
+          {{ createErrors.server }}
+        </div>
+
         <div class="space-y-1.5">
           <label for="staff-name" class="block text-sm font-medium text-[var(--color-ink)]">
             Full name
@@ -148,8 +156,20 @@
             type="text"
             required
             placeholder="e.g. Marco Villanueva"
-            class="w-full min-h-[44px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] text-base text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+            :aria-invalid="createErrors.name ? 'true' : undefined"
+            :aria-describedby="createErrors.name ? 'staff-name-error' : undefined"
+            class="w-full min-h-[44px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border text-base text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+            :class="createErrors.name ? 'border-[var(--color-berry)]' : 'border-[var(--color-line)]'"
+            @input="createErrors.name = ''; createErrors.server = ''"
           />
+          <p
+            v-if="createErrors.name"
+            id="staff-name-error"
+            role="alert"
+            class="text-sm font-semibold text-[var(--color-berry-ink)]"
+          >
+            {{ createErrors.name }}
+          </p>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -162,9 +182,22 @@
               v-model="newStaff.username"
               type="text"
               required
+              autocomplete="off"
               placeholder="e.g. waiter_marco"
-              class="w-full min-h-[44px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] text-base font-mono text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+              :aria-invalid="createErrors.username ? 'true' : undefined"
+              :aria-describedby="createErrors.username ? 'staff-username-error' : undefined"
+              class="w-full min-h-[44px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border text-base font-mono text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+              :class="createErrors.username ? 'border-[var(--color-berry)]' : 'border-[var(--color-line)]'"
+              @input="createErrors.username = ''; createErrors.server = ''"
             />
+            <p
+              v-if="createErrors.username"
+              id="staff-username-error"
+              role="alert"
+              class="text-sm font-semibold text-[var(--color-berry-ink)]"
+            >
+              {{ createErrors.username }}
+            </p>
           </div>
 
           <div class="space-y-1.5">
@@ -184,17 +217,50 @@
         </div>
 
         <div class="space-y-1.5">
-          <label for="staff-pass" class="block text-sm font-medium text-[var(--color-ink)]">
-            Temporary password
-          </label>
-          <input
-            id="staff-pass"
-            v-model="newStaff.password"
-            type="text"
-            required
-            minlength="6"
-            class="w-full min-h-[44px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] text-base font-mono text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
-          />
+          <div class="flex items-center justify-between gap-2">
+            <label for="staff-pass" class="block text-sm font-medium text-[var(--color-ink)]">
+              Temporary password
+            </label>
+            <button
+              type="button"
+              class="min-h-[44px] px-2.5 rounded-[var(--radius-pill)] text-xs font-bold text-[var(--color-accent)] hover:bg-[var(--color-accent-subtle)] transition-ui cursor-pointer"
+              @click="fillGeneratedCreatePassword"
+            >
+              Generate strong password
+            </button>
+          </div>
+          <div class="flex items-center gap-2">
+            <input
+              id="staff-pass"
+              v-model="newStaff.password"
+              :type="showCreatePassword ? 'text' : 'password'"
+              required
+              minlength="6"
+              autocomplete="new-password"
+              placeholder="Enter or generate at least 6 characters"
+              :aria-invalid="createErrors.password ? 'true' : undefined"
+              :aria-describedby="createErrors.password ? 'staff-pass-error' : undefined"
+              class="flex-1 min-w-0 min-h-[44px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border text-base font-mono text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+              :class="createErrors.password ? 'border-[var(--color-berry)]' : 'border-[var(--color-line)]'"
+              @input="createErrors.password = ''; createErrors.server = ''"
+            />
+            <button
+              type="button"
+              class="min-h-[44px] px-3.5 rounded-[var(--radius-input)] border border-[var(--color-line)] bg-[var(--color-surface)] text-sm font-semibold text-[var(--color-ink)] hover:bg-[var(--color-surface-alt)] transition-ui cursor-pointer shrink-0"
+              :aria-pressed="showCreatePassword"
+              @click="showCreatePassword = !showCreatePassword"
+            >
+              {{ showCreatePassword ? 'Hide' : 'Show' }}
+            </button>
+          </div>
+          <p
+            v-if="createErrors.password"
+            id="staff-pass-error"
+            role="alert"
+            class="text-sm font-semibold text-[var(--color-berry-ink)]"
+          >
+            {{ createErrors.password }}
+          </p>
         </div>
       </form>
 
@@ -222,19 +288,61 @@
       max-width="sm"
       @update:model-value="(open) => { if (!open) resetTarget = null }"
     >
-      <form id="staff-reset-form" class="space-y-1.5" @submit.prevent="confirmResetPassword">
-        <label for="temp-reset-pass" class="block text-sm font-medium text-[var(--color-ink)]">
-          Temporary password
-        </label>
-        <input
-          id="temp-reset-pass"
-          v-model="resetPasswordValue"
-          type="text"
-          required
-          minlength="6"
-          placeholder="At least 6 characters"
-          class="w-full min-h-[44px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border border-[var(--color-line)] text-base font-mono text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
-        />
+      <form id="staff-reset-form" novalidate class="space-y-2.5" @submit.prevent="confirmResetPassword">
+        <div
+          v-if="resetErrors.server"
+          role="alert"
+          class="px-3.5 py-2.5 rounded-[var(--radius-input)] bg-[var(--color-berry-bg)] border border-[var(--color-berry)]/45 text-sm font-semibold text-[var(--color-berry-ink)]"
+        >
+          {{ resetErrors.server }}
+        </div>
+
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <label for="temp-reset-pass" class="block text-sm font-medium text-[var(--color-ink)]">
+              Temporary password
+            </label>
+            <button
+              type="button"
+              class="min-h-[44px] px-2.5 rounded-[var(--radius-pill)] text-xs font-bold text-[var(--color-accent)] hover:bg-[var(--color-accent-subtle)] transition-ui cursor-pointer"
+              @click="fillGeneratedResetPassword"
+            >
+              Generate
+            </button>
+          </div>
+          <div class="flex items-center gap-2">
+            <input
+              id="temp-reset-pass"
+              v-model="resetPasswordValue"
+              :type="showResetPassword ? 'text' : 'password'"
+              required
+              minlength="6"
+              autocomplete="new-password"
+              placeholder="At least 6 characters"
+              :aria-invalid="resetErrors.password ? 'true' : undefined"
+              :aria-describedby="resetErrors.password ? 'temp-reset-pass-error' : undefined"
+              class="flex-1 min-w-0 min-h-[44px] px-3.5 rounded-[var(--radius-input)] bg-[var(--color-bg)] border text-base font-mono text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+              :class="resetErrors.password ? 'border-[var(--color-berry)]' : 'border-[var(--color-line)]'"
+              @input="resetErrors.password = ''; resetErrors.server = ''"
+            />
+            <button
+              type="button"
+              class="min-h-[44px] px-3.5 rounded-[var(--radius-input)] border border-[var(--color-line)] bg-[var(--color-surface)] text-sm font-semibold text-[var(--color-ink)] hover:bg-[var(--color-surface-alt)] transition-ui cursor-pointer shrink-0"
+              :aria-pressed="showResetPassword"
+              @click="showResetPassword = !showResetPassword"
+            >
+              {{ showResetPassword ? 'Hide' : 'Show' }}
+            </button>
+          </div>
+          <p
+            v-if="resetErrors.password"
+            id="temp-reset-pass-error"
+            role="alert"
+            class="text-sm font-semibold text-[var(--color-berry-ink)]"
+          >
+            {{ resetErrors.password }}
+          </p>
+        </div>
       </form>
 
       <template #footer>
@@ -274,15 +382,67 @@ const loadError = ref<string | null>(null)
 const isSubmitting = ref(false)
 
 const isAddModalOpen = ref(false)
+const showCreatePassword = ref(false)
 const newStaff = reactive({
   name: '',
   username: '',
   role: 'waiter' as Role,
-  password: 'servio2026',
+  password: '',
+})
+const createErrors = reactive({
+  name: '',
+  username: '',
+  password: '',
+  server: '',
 })
 
 const resetTarget = ref<User | null>(null)
-const resetPasswordValue = ref('servio2026')
+const resetPasswordValue = ref('')
+const showResetPassword = ref(false)
+const resetErrors = reactive({
+  password: '',
+  server: '',
+})
+
+const generateTempPassword = (length = 12): string => {
+  const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*'
+  const bytes = new Uint32Array(length)
+  if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
+    window.crypto.getRandomValues(bytes)
+  } else {
+    for (let i = 0; i < length; i += 1) {
+      bytes[i] = Math.floor(Math.random() * charset.length)
+    }
+  }
+  return Array.from(bytes, (b) => charset[b % charset.length]).join('')
+}
+
+const openAddModal = () => {
+  newStaff.name = ''
+  newStaff.username = ''
+  newStaff.role = 'waiter'
+  newStaff.password = ''
+  showCreatePassword.value = false
+  createErrors.name = ''
+  createErrors.username = ''
+  createErrors.password = ''
+  createErrors.server = ''
+  isAddModalOpen.value = true
+}
+
+const fillGeneratedCreatePassword = () => {
+  newStaff.password = generateTempPassword()
+  showCreatePassword.value = true
+  createErrors.password = ''
+  createErrors.server = ''
+}
+
+const fillGeneratedResetPassword = () => {
+  resetPasswordValue.value = generateTempPassword()
+  showResetPassword.value = true
+  resetErrors.password = ''
+  resetErrors.server = ''
+}
 
 const fetchStaff = async () => {
   isLoading.value = true
@@ -320,23 +480,44 @@ const handleToggleActive = async (staff: User) => {
 }
 
 const handleCreateUser = async () => {
-  if (!newStaff.name.trim() || !newStaff.username.trim()) return
-  if (newStaff.password.trim().length < 6) {
-    toastStore.error('Password too short', 'Temporary password must be at least 6 characters.')
-    return
+  const cleanName = newStaff.name.trim()
+  const cleanUsername = newStaff.username.trim()
+  const cleanPassword = newStaff.password.trim()
+
+  createErrors.name = cleanName ? '' : 'Please enter the staff member’s full name.'
+  if (!cleanUsername) {
+    createErrors.username = 'Please enter a username.'
+  } else if (cleanUsername.length < 3) {
+    createErrors.username = 'Username must be at least 3 characters.'
+  } else if (!/^[a-zA-Z0-9._-]+$/.test(cleanUsername)) {
+    createErrors.username = 'Use only letters, numbers, dots, underscores, or hyphens.'
+  } else {
+    createErrors.username = ''
   }
+  createErrors.password =
+    cleanPassword.length >= 6 ? '' : 'Temporary password must be at least 6 characters.'
+  createErrors.server = ''
+
+  if (createErrors.name || createErrors.username || createErrors.password) return
+
   isSubmitting.value = true
   try {
-    const created = await userService.createUser({ ...newStaff })
+    const created = await userService.createUser({
+      name: cleanName,
+      username: cleanUsername,
+      role: newStaff.role,
+      password: cleanPassword,
+    })
     staffList.value.unshift(created)
     toastStore.success('Staff registered', `${created.name} (@${created.username}) can now sign in.`)
     newStaff.name = ''
     newStaff.username = ''
     newStaff.role = 'waiter'
-    newStaff.password = 'servio2026'
+    newStaff.password = ''
+    showCreatePassword.value = false
     isAddModalOpen.value = false
   } catch (err: unknown) {
-    toastStore.error('Registration failed', (err as Error)?.message || 'Could not create account.')
+    createErrors.server = (err as Error)?.message || 'Could not create account. Please try again.'
   } finally {
     isSubmitting.value = false
   }
@@ -344,23 +525,29 @@ const handleCreateUser = async () => {
 
 const openResetModal = (staff: User) => {
   resetTarget.value = staff
-  resetPasswordValue.value = 'servio2026'
+  resetPasswordValue.value = ''
+  showResetPassword.value = false
+  resetErrors.password = ''
+  resetErrors.server = ''
 }
 
 const confirmResetPassword = async () => {
   if (!resetTarget.value) return
   const cleanPass = resetPasswordValue.value.trim()
+  resetErrors.server = ''
   if (cleanPass.length < 6) {
-    toastStore.error('Password too short', 'Temporary password must be at least 6 characters.')
+    resetErrors.password = 'Temporary password must be at least 6 characters.'
     return
   }
+  resetErrors.password = ''
   isSubmitting.value = true
   try {
     await userService.resetPassword(resetTarget.value.id, cleanPass)
     toastStore.success('Password reset', `${resetTarget.value.name} will update it on next login.`)
     resetTarget.value = null
+    resetPasswordValue.value = ''
   } catch (err: unknown) {
-    toastStore.error('Reset failed', (err as Error)?.message || 'Please try again.')
+    resetErrors.server = (err as Error)?.message || 'Could not reset password. Please try again.'
   } finally {
     isSubmitting.value = false
   }

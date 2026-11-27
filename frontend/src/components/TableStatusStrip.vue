@@ -119,7 +119,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Order } from '@/types'
 import { useTicker } from '@/composables/useTicker'
-import { formatCurrency, formatElapsedClock, getElapsedMinutes } from '@/utils/format'
+import { formatCurrency, formatElapsedClock, formatTableLabel, getElapsedMinutes } from '@/utils/format'
 import { executeViewTransition } from '@/utils/transition'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -137,10 +137,7 @@ const isExpanded = ref(false)
 onMounted(start)
 onUnmounted(stop)
 
-const friendlyTable = computed(() => {
-  const num = Number((props.tableNumber || '').replace(/\D/g, ''))
-  return Number.isFinite(num) && num > 0 ? `Table ${num}` : props.tableNumber
-})
+const friendlyTable = computed(() => formatTableLabel(props.tableNumber))
 
 const elapsedClock = computed(() =>
   props.activeOrder ? formatElapsedClock(props.activeOrder.created_at, now.value) : '00:00',

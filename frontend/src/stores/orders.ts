@@ -16,6 +16,8 @@ interface OrdersState {
 
 const isOrderPaid = (o: Order) => o.payment_status === 'paid' || o.status === 'paid'
 
+let visibilityHandler: (() => void) | null = null
+
 export const useOrdersStore = defineStore('orders', {
   state: (): OrdersState => ({
     orders: [],
@@ -118,7 +120,11 @@ export const useOrdersStore = defineStore('orders', {
               if (existing.cancellation_reason !== inc.cancellation_reason) {
                 existing.cancellation_reason = inc.cancellation_reason
               }
-              if (JSON.stringify(existing.items) !== JSON.stringify(inc.items)) {
+              if (
+                existing.status !== 'paid' &&
+                existing.status !== 'cancelled' &&
+                JSON.stringify(existing.items) !== JSON.stringify(inc.items)
+              ) {
                 existing.items = inc.items
               }
             } else {
@@ -144,19 +150,36 @@ export const useOrdersStore = defineStore('orders', {
       if (this.isPolling) return
       this.isPolling = true
       const tablesStore = useTablesStore()
-      this.fetchOrders(this.orders.length > 0)
-      this.pollingTimer = window.setInterval(() => {
+
+      const pollOnce = () => {
+        if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
         this.fetchOrders(true)
         if (tablesStore.tables.length > 0) {
           tablesStore.fetchTables(true)
         }
-      }, intervalMs)
+      }
+
+      this.fetchOrders(this.orders.length > 0)
+      this.pollingTimer = window.setInterval(pollOnce, intervalMs)
+
+      if (typeof document !== 'undefined') {
+        visibilityHandler = () => {
+          if (document.visibilityState === 'visible') {
+            pollOnce()
+          }
+        }
+        document.addEventListener('visibilitychange', visibilityHandler)
+      }
     },
 
     stopPolling() {
       if (this.pollingTimer !== null) {
         clearInterval(this.pollingTimer)
         this.pollingTimer = null
+      }
+      if (typeof document !== 'undefined' && visibilityHandler) {
+        document.removeEventListener('visibilitychange', visibilityHandler)
+        visibilityHandler = null
       }
       this.isPolling = false
     },

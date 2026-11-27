@@ -34,7 +34,11 @@
         >
           <div class="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-[var(--color-line)]">
             <div class="space-y-1 min-w-0">
-              <Dialog.Title as="h2" class="font-display text-xl font-semibold text-[var(--color-ink)]">
+              <Dialog.Title
+                v-if="title"
+                as="h2"
+                class="font-display text-xl font-semibold text-[var(--color-ink)]"
+              >
                 {{ title }}
               </Dialog.Title>
               <Dialog.Description
